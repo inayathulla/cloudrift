@@ -1,0 +1,34 @@
+# Binaries
+cloudrift
+*.exe
+*.out
+
+# Build artifacts
+bin/
+dist/
+vendor/
+coverage.out
+
+# Git files
+.git
+.gitignore
+
+# Editor/IDE files
+*.swp
+*.swo
+*.bak
+.idea/
+.vscode/
+*.log
+
+# OS/system files
+.DS_Store
+Thumbs.db
+
+# Tests
+tests/
+*.test
+
+# Configs (optional)
+.env
+*.yaml

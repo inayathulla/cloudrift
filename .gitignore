@@ -1,0 +1,40 @@
+# Binaries
+cloudrift
+*.exe
+*.out
+*.test
+
+# Build output
+bin/
+dist/
+coverage.out
+
+# Go modules (optional if you use vendoring)
+vendor/
+
+# IDEs/editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+*.log
+
+# OS/system
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Configs (optional)
+.env
+*.yaml
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Test data
+tests/output/
