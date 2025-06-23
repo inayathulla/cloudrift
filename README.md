@@ -99,10 +99,39 @@ Repeat the same process for `vuln-export` or any other Terraform-based repo.
 - Slack/email notifications
 - Simple CLI and JSON output
 
-## 📝 License
-Apache License 2.0
-
 ---
 
 ## 🤝 Contributing
-Contributions welcome! Please open issues and PRs to improve Cloudrift.
+
+🧪 Development Guidelines
+Use clear commit messages (e.g., feat: add EC2 drift detection)
+
+Keep code modular (e.g., one service = one detector)
+Follow Go formatting: go fmt ./...
+Add unit tests for new components
+
+📁 Code Structure
+cmd/          ← CLI entrypoint
+internal/
+aws/          ← AWS fetchers
+detector/     ← Drift comparison logic
+parser/       ← Terraform plan parsing
+models/       ← Shared structs
+
+🧪 Testing
+Before submitting a PR:
+go test ./...
+
+📬 Submitting a Pull Request
+Push your branch
+Open a pull request to main
+Briefly explain what your change does and why
+We'll review your PR and respond quickly 🙌
+
+🙋‍♂️ Questions or Feedback?
+Open an issue or reach out via GitHub Discussions (coming soon).
+
+---
+
+## 📝 License
+Apache License 2.0
