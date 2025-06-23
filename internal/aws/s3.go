@@ -11,6 +11,39 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
+// FetchS3Buckets returns the live state of all S3 buckets in the account.
+func FetchS3Buckets() ([]models.S3Bucket, error) {
+	ctx := context.Background()
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load AWS config: %w", err)
+	}
+
+	s3Client := s3.NewFromConfig(cfg)
+
+	// List all buckets
+	listOutput, err := s3Client.ListBuckets(ctx, &s3.ListBucketsInput{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list buckets: %w", err)
+	}
+
+	var buckets []models.S3Bucket
+	for _, b := range listOutput.Buckets {
+		if b.Name == nil {
+			continue
+		}
+
+		liveState, err := FetchS3BucketState(*b.Name)
+		if err != nil {
+			fmt.Printf("⚠️ Warning: Could not fetch state for %s: %v\n", *b.Name, err)
+			continue
+		}
+		buckets = append(buckets, *liveState)
+	}
+
+	return buckets, nil
+}
+
 // FetchS3BucketState returns ACL and Tags for a given bucket from AWS.
 func FetchS3BucketState(bucketName string) (*models.S3Bucket, error) {
 	ctx := context.Background()
