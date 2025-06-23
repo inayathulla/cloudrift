@@ -61,7 +61,7 @@ Assume you have Terraform code stored in your repositories:
     └── ...
 ```
 
-To use Cloudrift:
+### To use Cloudrift:
 
 ### 1. Navigate to your Terraform project
 ```bash
@@ -82,12 +82,6 @@ region: us-east-1
 plan_path: ~/projects/compliance-export/compliance_plan.json
 ```
 
-### 4. Run Cloudrift to check for drift
-```bash
-cd ~/projects/cloudrift
-go run main.go scan
-```
-
 Repeat the same process for `vuln-export` or any other Terraform-based repo.
 
 ---
@@ -101,6 +95,26 @@ Repeat the same process for `vuln-export` or any other Terraform-based repo.
 
 ---
 
+## 📦 Installation
+
+### Install via Go (Recommended for developers)
+```bash
+go install github.com/inayathulla/cloudrift@latest
+```
+Make sure your `$GOPATH/bin` is in your `PATH`. Add this to your `~/.zshrc` or `~/.bashrc` if needed:
+```bash
+export PATH="$HOME/go/bin:$PATH"
+```
+Then reload your terminal:
+```bash
+source ~/.zshrc
+```
+Now run:
+```bash
+cloudrift scan --config=config/cloudrift.yml
+```
+
+---
 ## 🤝 Contributing
 
 ### 🧪 Development Guidelines
