@@ -1,8 +1,12 @@
 {
-  "bucket": "cloudrift-test-bucket",
-  "acl": "private",
-  "tags": {
-    "env": "prod",
-    "owner": "security-team"
-  }
+  "s3_buckets": [
+    {
+      "name": "cloudrift-test-bucket",
+      "acl": "private",
+      "tags": {
+        "env": "prod",
+        "owner": "security-team"
+      }
+    }
+  ]
 }
