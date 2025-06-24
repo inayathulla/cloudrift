@@ -26,15 +26,20 @@ Cloudrift is designed to be used by developers to detect cloud resource drift in
 ### ✅ Example: compliance-export or vuln-export projects
 
 Assume you have Terraform code stored in your repositories:
+You will need to create config folder and place cloudrift.yml file.
 
 ```
 ~/projects/
 ├── compliance-export/
 │   ├── main.tf
 │   ├── variables.tf
+│   ├── config/
+│       └── cloudrift.yml
 │   └── ...
 └── vuln-export/
     ├── main.tf
+    ├── config/
+    │    └── cloudrift.yml
     └── ...
 ```
 ### 1. Navigate to your Terraform project
@@ -62,7 +67,7 @@ Repeat the same process for `vuln-export` or any other Terraform-based repo.
 
 ## 📦 Installation
 
-### Install via Go (Recommended for developers)
+### 💻 Option 1: Install via Go (Local development)
 ```bash
 go install github.com/inayathulla/cloudrift@latest
 ```
@@ -79,6 +84,30 @@ Now run:
 cloudrift scan --config=config/cloudrift.yml
 ```
 
+### 🐳 Option 2: Run Cloudrift with Docker
+Make sure to mount your project directory using -v $(pwd):/app so the container can access your Terraform plan and config.
+```bash
+mkdir -p drift-reports
+
+docker run --rm \
+  -v $(pwd):/app \
+  inayathulla/cloudrift \
+  sh -c 'timestamp=$(date +%Y%m%d_%H%M%S) && \
+         cloudrift scan --config=/app/config/cloudrift.yml > /app/drift-reports/drift-report_$timestamp.txt'
+
+```
+Example output file (on your host):
+```
+./drift-reports/drift-report_20250623_113445.txt
+```
+✅ If everything is in place, you'll see output in file like:
+```
+🚀 Starting Cloudrift scan...
+⚠️ Drift detected in 1 S3 bucket(s):
+- Bucket: my-bucket
+  ✖ ACL mismatch
+  ✖ Tag env: expected=prod, actual=dev
+```
 ---
 ## 🤝 Contributing
 
