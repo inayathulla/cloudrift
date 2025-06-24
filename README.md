@@ -3,7 +3,7 @@ Detect drift. Defend cloud.
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 ![Docker Pulls](https://img.shields.io/docker/pulls/inayathulla/cloudrift)
-![Go Report Card](https://goreportcard.com/badge/github.com/inayathulla/cloudrift)
+[![Go Report Card](https://goreportcard.com/badge/github.com/inayathulla/cloudrift)](https://goreportcard.com/report/github.com/inayathulla/cloudrift)
 ![GitHub stars](https://img.shields.io/github/stars/inayathulla/cloudrift?style=social)
 ![GitHub issues](https://img.shields.io/github/issues/inayathulla/cloudrift)
 
