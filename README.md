@@ -14,36 +14,6 @@ Detect drift. Defend cloud.
 
 ---
 ## 🚀 Quick Start
-
-### Clone the repository
-```bash
-git clone https://github.com/inayathulla/cloudrift.git
-cd cloudrift
-```
-
-
-### 🔁 Using Cloudrift with your own Terraform projects
-
-Cloudrift is designed to be used by developers to detect cloud resource drift in their own Terraform-based infrastructure projects.
-
-### ✅ Example: compliance-export or vuln-export projects
-
-Assume you have Terraform code stored in your repositories:
-
-```
-~/projects/
-├── compliance-export/
-│   ├── main.tf
-│   ├── variables.tf
-│   └── ...
-└── vuln-export/
-    ├── main.tf
-    └── ...
-```
-
-To use Cloudrift:
-## 🚀 Quick Start
-
 ### Clone the repository
 ```bash
 git clone https://github.com/inayathulla/cloudrift.git
@@ -67,9 +37,6 @@ Assume you have Terraform code stored in your repositories:
     ├── main.tf
     └── ...
 ```
-
-### To use Cloudrift:
-
 ### 1. Navigate to your Terraform project
 ```bash
 cd ~/projects/compliance-export
