@@ -1,7 +1,11 @@
 # cloudrift
 Detect drift. Defend cloud.
 
-[![Docker Pulls](https://img.shields.io/docker/pulls/inayathulla/cloudrift)](https://hub.docker.com/r/inayathulla/cloudrift)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+![Docker Pulls](https://img.shields.io/docker/pulls/inayathulla/cloudrift)
+![Go Report Card](https://goreportcard.com/badge/github.com/inayathulla/cloudrift)
+![GitHub stars](https://img.shields.io/github/stars/inayathulla/cloudrift?style=social)
+![GitHub issues](https://img.shields.io/github/issues/inayathulla/cloudrift)
 
 🔍 **Cloudrift** is an open-source cloud drift detection tool that helps you identify when your cloud infrastructure no longer matches your Infrastructure-as-Code (IaC) — before it causes a security or compliance incident.
 
