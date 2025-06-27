@@ -9,7 +9,8 @@ type DriftResult struct {
 	BucketName string
 	Missing    bool
 	AclDiff    bool
-	TagDiffs   map[string][2]string // [planned, actual]
+	TagDiffs   map[string][2]string // [expected, actual]
+	ExtraTags  map[string]string    // Tags present in AWS but not in plan
 }
 
 // DetectS3Drift compares the Terraform plan bucket against the actual AWS bucket.
@@ -17,6 +18,7 @@ func DetectS3Drift(plan models.S3Bucket, actual *models.S3Bucket) DriftResult {
 	result := DriftResult{
 		BucketName: plan.Name,
 		TagDiffs:   make(map[string][2]string),
+		ExtraTags:  make(map[string]string),
 	}
 
 	if actual == nil {
@@ -28,10 +30,18 @@ func DetectS3Drift(plan models.S3Bucket, actual *models.S3Bucket) DriftResult {
 		result.AclDiff = true
 	}
 
-	// Compare tags (shallow diff)
+	// Detect tag mismatches and missing tags
 	for k, planVal := range plan.Tags {
-		if actualVal, ok := actual.Tags[k]; !ok || actualVal != planVal {
+		actualVal, ok := actual.Tags[k]
+		if !ok || actualVal != planVal {
 			result.TagDiffs[k] = [2]string{planVal, actualVal}
+		}
+	}
+
+	// Detect extra tags in AWS that are not in plan
+	for k, awsVal := range actual.Tags {
+		if _, ok := plan.Tags[k]; !ok {
+			result.ExtraTags[k] = awsVal
 		}
 	}
 
@@ -55,7 +65,7 @@ func DetectAllS3Drift(planBuckets []models.S3Bucket, actualBuckets []models.S3Bu
 			actual = a
 		}
 		result := DetectS3Drift(plan, actual)
-		if result.Missing || result.AclDiff || len(result.TagDiffs) > 0 {
+		if result.Missing || result.AclDiff || len(result.TagDiffs) > 0 || len(result.ExtraTags) > 0 {
 			results = append(results, result)
 		}
 	}

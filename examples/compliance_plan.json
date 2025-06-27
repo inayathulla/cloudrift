@@ -1,11 +1,19 @@
 {
-  "s3_buckets": [
+  "resource_changes": [
     {
-      "name": "cloudrift-test-bucket",
-      "acl": "private",
-      "tags": {
-        "env": "prod",
-        "owner": "security-team"
+      "address": "aws_s3_bucket.cloudrift",
+      "type": "aws_s3_bucket",
+      "name": "cloudrift",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "bucket": "cloudrift",
+          "acl": "private",
+          "tags": {
+            "env": "dev",
+            "owner": "security"
+          }
+        }
       }
     }
   ]

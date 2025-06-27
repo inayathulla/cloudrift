@@ -19,34 +19,62 @@ var scanCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("🚀 Starting Cloudrift scan...")
 
-		// 1. Read the YAML config using Viper
+		// Load YAML config
 		viper.SetConfigFile(configPath)
 		if err := viper.ReadInConfig(); err != nil {
 			fmt.Fprintf(os.Stderr, "❌ Failed to read config file: %v\n", err)
 			os.Exit(1)
 		}
 
+		// Extract config values
+		profile := viper.GetString("aws_profile")
+		region := viper.GetString("region")
 		planPath := viper.GetString("plan_path")
+
 		if planPath == "" {
 			fmt.Fprintln(os.Stderr, "❌ 'plan_path' not found in config")
 			os.Exit(1)
 		}
 
-		// 2. Load plan
+		// Load AWS config
+		cfg, err := aws.LoadAWSConfig(profile, region)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "❌ Failed to load AWS config: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Validate credentials
+		if err := aws.ValidateAWSCredentials(cfg); err != nil {
+			fmt.Fprintf(os.Stderr, "❌ Invalid AWS credentials: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Print connected identity
+		identity, err := aws.GetCallerIdentity(cfg)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "❌ Failed to retrieve AWS identity: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("🔐 Connected to AWS as: %s (%s)\n",
+			aws.SafeString(identity.Arn),
+			aws.SafeString(identity.Account))
+
+		// Load plan
 		plan, err := parser.LoadPlan(planPath)
 		if err != nil {
 			fmt.Printf("❌ Failed to load plan: %v\n", err)
 			return
 		}
+		fmt.Printf("📄 Plan loaded: %+v\n", plan)
 
-		// 3. Fetch live state from AWS
-		liveBuckets, err := aws.FetchS3Buckets()
+		// Fetch live AWS state
+		liveBuckets, err := aws.FetchS3Buckets(cfg)
 		if err != nil {
 			fmt.Printf("❌ Failed to fetch live S3 state: %v\n", err)
 			return
 		}
 
-		// 4. Detect drift
+		// Detect drift
 		results := detector.DetectAllS3Drift(plan, liveBuckets)
 		if len(results) == 0 {
 			fmt.Println("✅ No S3 drift detected!")
@@ -63,9 +91,19 @@ var scanCmd = &cobra.Command{
 				for k, diff := range r.TagDiffs {
 					fmt.Printf("  ✖ Tag %s: expected=%s, actual=%s\n", k, diff[0], diff[1])
 				}
+				for k, v := range r.ExtraTags {
+					fmt.Printf("  ✱ Extra tag in AWS: %s=%s\n", k, v)
+				}
 			}
 		}
 	},
+}
+
+func awsValue(ptr *string) string {
+	if ptr != nil {
+		return *ptr
+	}
+	return "unknown"
 }
 
 func init() {

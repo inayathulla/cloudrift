@@ -14,17 +14,22 @@ func ParseS3Buckets(plan *TerraformPlan) []models.S3Bucket {
 			continue
 		}
 
+		after := rc.Change.After
+		if after == nil {
+			continue
+		}
+
 		bucket := models.S3Bucket{
 			Id: rc.Address,
 		}
 
-		if name, ok := rc.Change.After["bucket"].(string); ok {
+		if name, ok := after["bucket"].(string); ok {
 			bucket.Name = name
 		}
-		if acl, ok := rc.Change.After["acl"].(string); ok {
+		if acl, ok := after["acl"].(string); ok {
 			bucket.Acl = acl
 		}
-		if tags, ok := rc.Change.After["tags"].(map[string]interface{}); ok {
+		if tags, ok := after["tags"].(map[string]interface{}); ok {
 			bucket.Tags = make(map[string]string)
 			for k, v := range tags {
 				if strVal, ok := v.(string); ok {

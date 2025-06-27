@@ -3,22 +3,16 @@ package aws
 import (
 	"context"
 	"fmt"
-	"github.com/inayathulla/cloudrift/internal/models"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/inayathulla/cloudrift/internal/models"
 )
 
-// FetchS3Buckets returns the live state of all S3 buckets in the account.
-func FetchS3Buckets() ([]models.S3Bucket, error) {
+// FetchS3Buckets returns the live state of all S3 buckets using the provided AWS config.
+func FetchS3Buckets(cfg aws.Config) ([]models.S3Bucket, error) {
 	ctx := context.Background()
-	cfg, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("unable to load AWS config: %w", err)
-	}
-
 	s3Client := s3.NewFromConfig(cfg)
 
 	// List all buckets
@@ -33,7 +27,7 @@ func FetchS3Buckets() ([]models.S3Bucket, error) {
 			continue
 		}
 
-		liveState, err := FetchS3BucketState(*b.Name)
+		liveState, err := FetchS3BucketState(*b.Name, cfg)
 		if err != nil {
 			fmt.Printf("⚠️ Warning: Could not fetch state for %s: %v\n", *b.Name, err)
 			continue
@@ -44,19 +38,14 @@ func FetchS3Buckets() ([]models.S3Bucket, error) {
 	return buckets, nil
 }
 
-// FetchS3BucketState returns ACL and Tags for a given bucket from AWS.
-func FetchS3BucketState(bucketName string) (*models.S3Bucket, error) {
+// FetchS3BucketState returns ACL and Tags for a given bucket using the provided AWS config.
+func FetchS3BucketState(bucketName string, cfg aws.Config) (*models.S3Bucket, error) {
 	ctx := context.Background()
-	cfg, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("unable to load AWS config: %w", err)
-	}
-
 	s3Client := s3.NewFromConfig(cfg)
 
 	// Get ACL
 	aclResp, err := s3Client.GetBucketAcl(ctx, &s3.GetBucketAclInput{
-		Bucket: aws.String(bucketName),
+		Bucket: &bucketName,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ACL for bucket %s: %w", bucketName, err)
@@ -65,7 +54,7 @@ func FetchS3BucketState(bucketName string) (*models.S3Bucket, error) {
 
 	// Get Tags
 	tagResp, err := s3Client.GetBucketTagging(ctx, &s3.GetBucketTaggingInput{
-		Bucket: aws.String(bucketName),
+		Bucket: &bucketName,
 	})
 	tags := make(map[string]string)
 	if err == nil {
@@ -73,6 +62,7 @@ func FetchS3BucketState(bucketName string) (*models.S3Bucket, error) {
 			tags[*tag.Key] = *tag.Value
 		}
 	}
+	fmt.Printf("🔍 Live bucket state for %s: tags=%+v acl=%s\n", bucketName, tags, acl)
 
 	return &models.S3Bucket{
 		Name: bucketName,
@@ -81,8 +71,8 @@ func FetchS3BucketState(bucketName string) (*models.S3Bucket, error) {
 	}, nil
 }
 
+// aclToString simplifies the ACL to either "private" or "public-read"
 func aclToString(grants []types.Grant) string {
-	// Simplify to owner ACL only (expand logic later if needed)
 	for _, g := range grants {
 		if g.Grantee != nil && g.Grantee.Type == types.TypeCanonicalUser {
 			if g.Permission == types.PermissionFullControl {
