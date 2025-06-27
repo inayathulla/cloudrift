@@ -56,14 +56,38 @@ cd ~/projects/compliance-export
 ```bash
 terraform init
 terraform plan -out=compliance.binary
-terraform show -json compliance.binary > compliance_plan.json
+terraform show -json compliance.binary > plan.json
+```
+Example of plan.json 
+```json
+{
+  "resource_changes": [
+    {
+      "address": "aws_s3_bucket.cloudrift",
+      "type": "aws_s3_bucket",
+      "name": "cloudrift",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "bucket": "cloudrift",
+          "acl": "private",
+          "tags": {
+            "env": "dev",
+            "owner": "security"
+          }
+        }
+      }
+    }
+  ]
+}
+
 ```
 
 ### 3. Update Cloudrift config (cloudrift.yaml)
 ```yaml
 aws_profile: default
 region: us-east-1
-plan_path: ~/projects/compliance-export/compliance_plan.json
+plan_path: ~/projects/compliance-export/plan.json
 ```
 
 Repeat the same process for `vuln-export` or any other Terraform-based repo.
@@ -105,13 +129,19 @@ Example output file (on your host):
 ```
 ./drift-reports/drift-report_20250623_113445.txt
 ```
-✅ If everything is in place, you'll see output in file like:
+✅ If everything is in place, and there is drift from plan and live state then you'll see output in file like:
 ```
 🚀 Starting Cloudrift scan...
+🔧 Using AWS Profile: default | Region: us-east-1
+🔐 Connected to AWS as: arn:aws:iam::221183348221:root (221183348221)
+📄 Plan loaded: [{Id:aws_s3_bucket.cloudrift Name:cloudrift Acl:private Tags:map[env:dev owner:security]}]
+🔍 Live bucket state for cloudrift: tags=map[environment:test] acl=private
 ⚠️ Drift detected in 1 S3 bucket(s):
-- Bucket: my-bucket
-  ✖ ACL mismatch
-  ✖ Tag env: expected=prod, actual=dev
+- Bucket: cloudrift
+  ✖ Tag env: expected=dev, actual=
+  ✖ Tag owner: expected=security, actual=
+  ✱ Extra tag in AWS: environment=test
+
 ```
 ---
 ## 🤝 Contributing
