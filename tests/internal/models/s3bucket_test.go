@@ -16,7 +16,7 @@ func EqualS3Bucket(a, b models.S3Bucket) bool {
 
 func TestS3Bucket_Equal(t *testing.T) {
 	bucket1 := models.S3Bucket{
-		Name: "test-bucket",
+		Name: "tests-bucket",
 		Acl:  "private",
 		Tags: map[string]string{
 			"env":  "dev",
@@ -25,7 +25,7 @@ func TestS3Bucket_Equal(t *testing.T) {
 	}
 
 	bucket2 := models.S3Bucket{
-		Name: "test-bucket",
+		Name: "tests-bucket",
 		Acl:  "private",
 		Tags: map[string]string{
 			"env":  "dev",

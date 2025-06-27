@@ -1,0 +1,21 @@
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.24.4
+
+      - name: Install go-junit-report
+        run: go install github.com/jstemmer/go-junit-report/v2@latest
+
+      - name: Run tests and generate JUnit XML
+        run: |
+          mkdir -p test-results
+          go test -v ./... -json > test-results/report.json
+          $HOME/go/bin/go-junit-report < test-results/report.json > test-results/junit.xml

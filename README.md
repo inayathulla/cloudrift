@@ -6,6 +6,7 @@ Detect drift. Defend cloud.
 [![Go Report Card](https://goreportcard.com/badge/github.com/inayathulla/cloudrift)](https://goreportcard.com/report/github.com/inayathulla/cloudrift)
 ![GitHub stars](https://img.shields.io/github/stars/inayathulla/cloudrift?style=social)
 ![GitHub issues](https://img.shields.io/github/issues/inayathulla/cloudrift)
+![Go Test](https://github.com/inayathulla/cloudrift/actions/workflows/tests.yml/badge.svg)
 
 🔍 **Cloudrift** is an open-source cloud drift detection tool that helps you identify when your cloud infrastructure no longer matches your Infrastructure-as-Code (IaC) — before it causes a security or compliance incident.
 
@@ -132,7 +133,7 @@ Example output file (on your host):
 ### 🧪 Testing
 Before submitting a PR:
 ```bash
-go test ./...
+go tests ./...
 ```
 ### 📬 Submitting a Pull Request
 - Push your branch
