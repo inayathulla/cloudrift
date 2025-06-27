@@ -27,3 +27,8 @@ jobs:
           mkdir -p test-results
           go test -v ./... -json > test-results/report.json
           $HOME/go/bin/go-junit-report < test-results/report.json > test-results/junit.xml
+
+      - name: Upload test results for UI display
+        uses: actions/upload-test-results@v2
+        with:
+          files: test-results/junit.xml
