@@ -3,59 +3,42 @@ package aws
 import (
 	"context"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	sdkconfig "github.com/aws/aws-sdk-go-v2/config"
+	sdkaws "github.com/aws/aws-sdk-go-v2/aws"
+	v2config "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 )
 
-// LoadAWSConfig loads the AWS configuration based on profile and region.
-// Priority:
-// 1. Explicit profile and region from config file (viper).
-// 2. Environment variables (AWS_ACCESS_KEY_ID, etc.).
-// 3. IAM role (when running in AWS EC2/ECS/Lambda).
-// LoadAWSConfig loads AWS config using profile and region, with retry.
-func LoadAWSConfig(profile, region string) (aws.Config, error) {
+// LoadAWSConfig returns a v2 aws.Config (value), retrying on errors.
+func LoadAWSConfig(profile, region string) (sdkaws.Config, error) {
 	ctx := context.Background()
-	var opts []func(*sdkconfig.LoadOptions) error
-
+	var opts []func(*v2config.LoadOptions) error
 	if profile != "" {
-		opts = append(opts, sdkconfig.WithSharedConfigProfile(profile))
+		opts = append(opts, v2config.WithSharedConfigProfile(profile))
 	}
 	if region != "" {
-		opts = append(opts, sdkconfig.WithRegion(region))
+		opts = append(opts, v2config.WithRegion(region))
 	}
+	fmt.Printf("🔧 AWS Profile=%s Region=%s\n", profile, region)
 
-	fmt.Printf("🔧 Using AWS Profile: %s | Region: %s\n", profile, region)
-
-	var cfg aws.Config
+	var cfg sdkaws.Config
 	var err error
-
-	// Retry logic for transient errors
-	maxRetries := 3
-	for i := 0; i < maxRetries; i++ {
-		cfg, err = sdkconfig.LoadDefaultConfig(ctx, opts...)
+	for i := 1; i <= 3; i++ {
+		cfg, err = v2config.LoadDefaultConfig(ctx, opts...)
 		if err == nil {
-			break
+			return cfg, nil
 		}
-		fmt.Printf("⚠️ Retry %d: failed to load AWS config: %v\n", i+1, err)
-		time.Sleep(time.Duration(i+1) * time.Second)
+		fmt.Printf("⚠️ Retry %d: %v\n", i, err)
+		time.Sleep(time.Duration(i) * time.Second)
 	}
-
-	if err != nil {
-		return aws.Config{}, fmt.Errorf("failed to load AWS config after %d attempts: %w", maxRetries, err)
-	}
-
-	return cfg, nil
+	return sdkaws.Config{}, fmt.Errorf("could not load AWS config: %w", err)
 }
 
-// ValidateAWSCredentials verifies that credentials are valid using STS GetCallerIdentity.
-func ValidateAWSCredentials(cfg aws.Config) error {
-	ctx := context.Background()
-	stsClient := sts.NewFromConfig(cfg)
-
-	_, err := stsClient.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
+// ValidateAWSCredentials calls STS GetCallerIdentity.
+func ValidateAWSCredentials(cfg sdkaws.Config) error {
+	client := sts.NewFromConfig(cfg)
+	_, err := client.GetCallerIdentity(context.Background(), &sts.GetCallerIdentityInput{})
 	if err != nil {
 		return fmt.Errorf("invalid AWS credentials: %w", err)
 	}

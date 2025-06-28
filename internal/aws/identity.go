@@ -4,22 +4,21 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
+	sdkaws "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 )
 
 // GetCallerIdentity fetches the current AWS IAM identity (ARN, Account ID).
-func GetCallerIdentity(cfg aws.Config) (*sts.GetCallerIdentityOutput, error) {
-	ctx := context.Background()
+func GetCallerIdentity(cfg sdkaws.Config) (*sts.GetCallerIdentityOutput, error) {
 	client := sts.NewFromConfig(cfg)
-
-	output, err := client.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
+	out, err := client.GetCallerIdentity(context.Background(), &sts.GetCallerIdentityInput{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get caller identity: %w", err)
 	}
-	return output, nil
+	return out, nil
 }
 
+// SafeString returns a non-nil string.
 func SafeString(s *string) string {
 	if s == nil {
 		return "N/A"

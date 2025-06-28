@@ -6,12 +6,20 @@ import (
 
 	"github.com/inayathulla/cloudrift/internal/aws"
 	"github.com/inayathulla/cloudrift/internal/detector"
+	"github.com/inayathulla/cloudrift/internal/models"
 	"github.com/inayathulla/cloudrift/internal/parser"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var configPath string
+var service string // e.g. "s3", "ec2"
+
+// DriftDetector defines the interface for any service-specific detector.
+type DriftDetector interface {
+	FetchLiveState() (interface{}, error)
+	DetectDrift(plan interface{}, live interface{}) ([]detector.DriftResult, error)
+}
 
 var scanCmd = &cobra.Command{
 	Use:   "scan",
@@ -19,94 +27,104 @@ var scanCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("🚀 Starting Cloudrift scan...")
 
-		// Load YAML config
+		// 1) Load YAML config
 		viper.SetConfigFile(configPath)
 		if err := viper.ReadInConfig(); err != nil {
 			fmt.Fprintf(os.Stderr, "❌ Failed to read config file: %v\n", err)
 			os.Exit(1)
 		}
-
-		// Extract config values
 		profile := viper.GetString("aws_profile")
 		region := viper.GetString("region")
 		planPath := viper.GetString("plan_path")
-
 		if planPath == "" {
 			fmt.Fprintln(os.Stderr, "❌ 'plan_path' not found in config")
 			os.Exit(1)
 		}
 
-		// Load AWS config
+		// 2) Load AWS config and validate credentials
 		cfg, err := aws.LoadAWSConfig(profile, region)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "❌ Failed to load AWS config: %v\n", err)
 			os.Exit(1)
 		}
-
-		// Validate credentials
 		if err := aws.ValidateAWSCredentials(cfg); err != nil {
 			fmt.Fprintf(os.Stderr, "❌ Invalid AWS credentials: %v\n", err)
 			os.Exit(1)
 		}
 
-		// Print connected identity
+		// 3) Print AWS caller identity
 		identity, err := aws.GetCallerIdentity(cfg)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "❌ Failed to retrieve AWS identity: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Printf("🔐 Connected to AWS as: %s (%s)\n",
-			aws.SafeString(identity.Arn),
-			aws.SafeString(identity.Account))
+		fmt.Printf("🔐 Connected as: %s (%s)\n",
+			*identity.Arn, *identity.Account)
 
-		// Load plan
-		plan, err := parser.LoadPlan(planPath)
+		// 4) Load Terraform plan
+		planResources, err := parser.LoadPlan(planPath)
 		if err != nil {
-			fmt.Printf("❌ Failed to load plan: %v\n", err)
-			return
+			fmt.Fprintf(os.Stderr, "❌ Failed to load plan: %v\n", err)
+			os.Exit(1)
 		}
-		fmt.Printf("📄 Plan loaded: %+v\n", plan)
+		fmt.Printf("📄 Plan loaded: %+v\n", planResources)
 
-		// Fetch live AWS state
-		liveBuckets, err := aws.FetchS3Buckets(cfg)
+		// 5) Select the appropriate detector
+		var det DriftDetector
+		switch service {
+		case "s3":
+			det = detector.NewS3DriftDetector(cfg)
+		default:
+			fmt.Fprintf(os.Stderr, "❌ Unsupported service: %s\n", service)
+			os.Exit(1)
+		}
+
+		// 6) Fetch live state
+		rawLive, err := det.FetchLiveState()
 		if err != nil {
-			fmt.Printf("❌ Failed to fetch live S3 state: %v\n", err)
-			return
+			fmt.Fprintf(os.Stderr, "❌ Failed to fetch live state: %v\n", err)
+			os.Exit(1)
 		}
 
-		// Detect drift
-		results := detector.DetectAllS3Drift(plan, liveBuckets)
+		// 7) Cast to concrete type so we can inspect
+		liveResources, ok := rawLive.([]models.S3Bucket)
+		if !ok {
+			fmt.Fprintf(os.Stderr, "❌ Unexpected live state type\n")
+			os.Exit(1)
+		}
+		for _, res := range liveResources {
+			fmt.Printf("🔍 Live state for %s: tags=%v acl=%s\n",
+				res.Name, res.Tags, res.Acl)
+		}
+
+		// 8) Detect drift
+		results, err := det.DetectDrift(planResources, liveResources)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "❌ Drift detection failed: %v\n", err)
+			os.Exit(1)
+		}
+
+		// 9) Print drift results
 		if len(results) == 0 {
-			fmt.Println("✅ No S3 drift detected!")
-		} else {
-			fmt.Printf("⚠️ Drift detected in %d S3 bucket(s):\n", len(results))
-			for _, r := range results {
-				fmt.Printf("- Bucket: %s\n", r.BucketName)
-				if r.Missing {
-					fmt.Println("  ✖ Missing in AWS")
-				}
-				if r.AclDiff {
-					fmt.Println("  ✖ ACL mismatch")
-				}
-				for k, diff := range r.TagDiffs {
-					fmt.Printf("  ✖ Tag %s: expected=%s, actual=%s\n", k, diff[0], diff[1])
-				}
-				for k, v := range r.ExtraTags {
-					fmt.Printf("  ✱ Extra tag in AWS: %s=%s\n", k, v)
-				}
+			fmt.Println("✅ No drift detected!")
+			return
+		}
+		fmt.Printf("⚠️ Drift in %d resource(s):\n", len(results))
+		for _, r := range results {
+			fmt.Printf("- %s\n", r.BucketName)
+			for key, diff := range r.TagDiffs {
+				fmt.Printf("  ✖ Tag %s: expected=%s, actual=%s\n",
+					key, diff[0], diff[1])
+			}
+			for key, val := range r.ExtraTags {
+				fmt.Printf("  ✱ Extra tag %s=%s\n", key, val)
 			}
 		}
 	},
 }
 
-func awsValue(ptr *string) string {
-	if ptr != nil {
-		return *ptr
-	}
-	return "unknown"
-}
-
 func init() {
 	scanCmd.Flags().StringVarP(&configPath, "config", "c", "cloudrift.yml", "Path to Cloudrift config file")
+	scanCmd.Flags().StringVarP(&service, "service", "s", "s3", "AWS service to scan (e.g., s3)")
 	rootCmd.AddCommand(scanCmd)
 }
