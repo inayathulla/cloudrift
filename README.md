@@ -1,7 +1,6 @@
 # cloudrift
-![cloudrift-logo.png](assets/cloudrift-logo.png)
 Detect drift. Defend cloud.
-
+![initial-demo.gif](assets/initial-demo.gif)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 ![Docker Pulls](https://img.shields.io/docker/pulls/inayathulla/cloudrift)
 [![Go Report Card](https://goreportcard.com/badge/github.com/inayathulla/cloudrift)](https://goreportcard.com/report/github.com/inayathulla/cloudrift)
@@ -130,20 +129,9 @@ Example output file (on your host):
 ```
 ./drift-reports/drift-report_20250623_113445.txt
 ```
-✅ If everything is in place, and there is drift from plan and live state then you'll see output in file like:
-```
-🚀 Starting Cloudrift scan...
-🔧 Using AWS Profile: default | Region: us-east-1
-🔐 Connected to AWS as: arn:aws:iam::221183348221:root (221183348221)
-📄 Plan loaded: [{Id:aws_s3_bucket.cloudrift Name:cloudrift Acl:private Tags:map[env:dev owner:security]}]
-🔍 Live bucket state for cloudrift: tags=map[environment:test] acl=private
-⚠️ Drift detected in 1 S3 bucket(s):
-- Bucket: cloudrift
-  ✖ Tag env: expected=dev, actual=
-  ✖ Tag owner: expected=security, actual=
-  ✱ Extra tag in AWS: environment=test
+## 📸 Demo
+![initial-demo.gif](assets/initial-demo.gif)
 
-```
 ---
 ## 🤝 Contributing
 
