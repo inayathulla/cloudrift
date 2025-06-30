@@ -92,21 +92,16 @@ func DetectS3Drift(plan models.S3Bucket, actual *models.S3Bucket) DriftResult {
 		res.EncryptionDiff = true
 	}
 
-	// Logging diff (only if plan configured any logging settings)
-	if plan.LoggingEnabled || plan.LoggingTargetBucket != "" || plan.LoggingTargetPrefix != "" {
-		if plan.LoggingEnabled != actual.LoggingEnabled ||
-			plan.LoggingTargetBucket != actual.LoggingTargetBucket ||
-			plan.LoggingTargetPrefix != actual.LoggingTargetPrefix {
-			res.LoggingDiff = true
-		}
+	// Logging diff — compare regardless of plan fields
+	if plan.LoggingEnabled != actual.LoggingEnabled ||
+		plan.LoggingTargetBucket != actual.LoggingTargetBucket ||
+		plan.LoggingTargetPrefix != actual.LoggingTargetPrefix {
+		res.LoggingDiff = true
 	}
 
-	// Public Access Block diff (only if plan specified any PAB settings)
-	defaultPAB := models.PublicAccessBlockConfig{}
-	if plan.PublicAccessBlock != defaultPAB {
-		if !reflect.DeepEqual(plan.PublicAccessBlock, actual.PublicAccessBlock) {
-			res.PublicAccessBlockDiff = true
-		}
+	// Public Access Block diff — compare unconditionally
+	if !reflect.DeepEqual(plan.PublicAccessBlock, actual.PublicAccessBlock) {
+		res.PublicAccessBlockDiff = true
 	}
 
 	// Lifecycle rules diff (only if plan defined any rules)

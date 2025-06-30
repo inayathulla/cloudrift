@@ -1,3 +1,4 @@
+// tests/internal/detector/s3_test.go
 package detector
 
 import (
@@ -71,7 +72,12 @@ func TestDetectS3Drift_Encryption_Negative(t *testing.T) {
 // Logging positive and negative
 func TestDetectS3Drift_Logging_Positive(t *testing.T) {
 	plan := models.S3Bucket{Name: "b-log", LoggingEnabled: false}
-	actual := &models.S3Bucket{Name: "b-log", LoggingEnabled: true, LoggingTargetBucket: "lb", LoggingTargetPrefix: "p/"}
+	actual := &models.S3Bucket{
+		Name:                "b-log",
+		LoggingEnabled:      true,
+		LoggingTargetBucket: "lb",
+		LoggingTargetPrefix: "p/",
+	}
 	res := detector.DetectS3Drift(plan, actual)
 	assert.True(t, res.LoggingDiff)
 }
@@ -85,8 +91,14 @@ func TestDetectS3Drift_Logging_Negative(t *testing.T) {
 
 // PublicAccessBlock positive and negative
 func TestDetectS3Drift_PublicAccessBlock_Positive(t *testing.T) {
-	plan := models.S3Bucket{Name: "b-pab", PublicAccessBlock: models.PublicAccessBlockConfig{false, false, false, false}}
-	actual := &models.S3Bucket{Name: "b-pab", PublicAccessBlock: models.PublicAccessBlockConfig{true, false, false, false}}
+	plan := models.S3Bucket{
+		Name:              "b-pab",
+		PublicAccessBlock: models.PublicAccessBlockConfig{false, false, false, false},
+	}
+	actual := &models.S3Bucket{
+		Name:              "b-pab",
+		PublicAccessBlock: models.PublicAccessBlockConfig{true, false, false, false},
+	}
 	res := detector.DetectS3Drift(plan, actual)
 	assert.True(t, res.PublicAccessBlockDiff)
 }
@@ -101,14 +113,26 @@ func TestDetectS3Drift_PublicAccessBlock_Negative(t *testing.T) {
 
 // LifecycleRules positive and negative
 func TestDetectS3Drift_Lifecycle_Positive(t *testing.T) {
-	plan := models.S3Bucket{Name: "b-lc", LifecycleRules: []models.LifecycleRuleSummary{{ID: "r1", Status: "Enabled"}}}
-	actual := &models.S3Bucket{Name: "b-lc", LifecycleRules: []models.LifecycleRuleSummary{{ID: "r1", Status: "Disabled"}}}
+	plan := models.S3Bucket{
+		Name: "b-lc",
+		LifecycleRules: []models.LifecycleRuleSummary{
+			{ID: "r1", Status: "Enabled", Prefix: "logs/", ExpirationDays: 90},
+		},
+	}
+	actual := &models.S3Bucket{
+		Name: "b-lc",
+		LifecycleRules: []models.LifecycleRuleSummary{
+			{ID: "r1", Status: "Enabled", Prefix: "logs/", ExpirationDays: 80},
+		},
+	}
 	res := detector.DetectS3Drift(plan, actual)
 	assert.True(t, res.LifecycleDiff)
 }
 
 func TestDetectS3Drift_Lifecycle_Negative(t *testing.T) {
-	rules := []models.LifecycleRuleSummary{{ID: "r1", Status: "Enabled"}}
+	rules := []models.LifecycleRuleSummary{
+		{ID: "r1", Status: "Enabled", Prefix: "", ExpirationDays: 30},
+	}
 	plan := models.S3Bucket{Name: "b-lc", LifecycleRules: rules}
 	actual := &models.S3Bucket{Name: "b-lc", LifecycleRules: rules}
 	res := detector.DetectS3Drift(plan, actual)
