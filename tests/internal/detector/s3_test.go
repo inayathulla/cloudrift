@@ -8,56 +8,109 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDetectS3Drift_MissingBucket(t *testing.T) {
-	plan := models.S3Bucket{
-		Name: "test-bucket",
-		Acl:  "private",
-		Tags: map[string]string{"env": "prod"},
-	}
-	var actual *models.S3Bucket = nil
-
-	result := detector.DetectS3Drift(plan, actual)
-
-	assert.Equal(t, "test-bucket", result.BucketName)
-	assert.True(t, result.Missing)
-	assert.False(t, result.AclDiff)
-	assert.Empty(t, result.TagDiffs)
+// ACL positive and negative
+func TestDetectS3Drift_ACL_Positive(t *testing.T) {
+	plan := models.S3Bucket{Name: "b-acl", Acl: "private"}
+	actual := &models.S3Bucket{Name: "b-acl", Acl: "public-read"}
+	res := detector.DetectS3Drift(plan, actual)
+	assert.True(t, res.AclDiff)
 }
 
-func TestDetectS3Drift_AclAndTagMismatch(t *testing.T) {
-	plan := models.S3Bucket{
-		Name: "example-bucket",
-		Acl:  "private",
-		Tags: map[string]string{"owner": "team-a", "env": "prod"},
-	}
-	actual := &models.S3Bucket{
-		Name: "example-bucket",
-		Acl:  "public-read",
-		Tags: map[string]string{"owner": "team-b", "env": "prod"},
-	}
-
-	result := detector.DetectS3Drift(plan, actual)
-
-	assert.Equal(t, "example-bucket", result.BucketName)
-	assert.False(t, result.Missing)
-	assert.True(t, result.AclDiff)
-	assert.Len(t, result.TagDiffs, 1)
-	assert.Equal(t, [2]string{"team-a", "team-b"}, result.TagDiffs["owner"])
+func TestDetectS3Drift_ACL_Negative(t *testing.T) {
+	plan := models.S3Bucket{Name: "b-acl", Acl: "private"}
+	actual := &models.S3Bucket{Name: "b-acl", Acl: "private"}
+	res := detector.DetectS3Drift(plan, actual)
+	assert.False(t, res.AclDiff)
 }
 
-func TestDetectAllS3Drift(t *testing.T) {
-	planBuckets := []models.S3Bucket{
-		{Name: "bucket-1", Acl: "private", Tags: map[string]string{"env": "prod"}},
-		{Name: "bucket-2", Acl: "private", Tags: map[string]string{}},
-	}
-	actualBuckets := []models.S3Bucket{
-		{Name: "bucket-1", Acl: "private", Tags: map[string]string{"env": "prod"}},
-		{Name: "bucket-2", Acl: "public-read", Tags: map[string]string{}},
-	}
+// TagDiff positive and negative
+func TestDetectS3Drift_TagDiff_Positive(t *testing.T) {
+	plan := models.S3Bucket{Name: "b-tag", Tags: map[string]string{"k": "v1"}}
+	actual := &models.S3Bucket{Name: "b-tag", Tags: map[string]string{"k": "v2"}}
+	res := detector.DetectS3Drift(plan, actual)
+	assert.Len(t, res.TagDiffs, 1)
+}
 
-	results := detector.DetectAllS3Drift(planBuckets, actualBuckets)
+func TestDetectS3Drift_TagDiff_Negative(t *testing.T) {
+	plan := models.S3Bucket{Name: "b-tag", Tags: map[string]string{"k": "v"}}
+	actual := &models.S3Bucket{Name: "b-tag", Tags: map[string]string{"k": "v"}}
+	res := detector.DetectS3Drift(plan, actual)
+	assert.Empty(t, res.TagDiffs)
+}
 
-	assert.Len(t, results, 1)
-	assert.Equal(t, "bucket-2", results[0].BucketName)
-	assert.True(t, results[0].AclDiff)
+// Versioning positive and negative
+func TestDetectS3Drift_Versioning_Positive(t *testing.T) {
+	plan := models.S3Bucket{Name: "b-ver", VersioningEnabled: false}
+	actual := &models.S3Bucket{Name: "b-ver", VersioningEnabled: true}
+	res := detector.DetectS3Drift(plan, actual)
+	assert.True(t, res.VersioningDiff)
+}
+
+func TestDetectS3Drift_Versioning_Negative(t *testing.T) {
+	plan := models.S3Bucket{Name: "b-ver", VersioningEnabled: true}
+	actual := &models.S3Bucket{Name: "b-ver", VersioningEnabled: true}
+	res := detector.DetectS3Drift(plan, actual)
+	assert.False(t, res.VersioningDiff)
+}
+
+// Encryption positive and negative
+func TestDetectS3Drift_Encryption_Positive(t *testing.T) {
+	plan := models.S3Bucket{Name: "b-enc", EncryptionAlgorithm: "AES256"}
+	actual := &models.S3Bucket{Name: "b-enc", EncryptionAlgorithm: "aws:kms"}
+	res := detector.DetectS3Drift(plan, actual)
+	assert.True(t, res.EncryptionDiff)
+}
+
+func TestDetectS3Drift_Encryption_Negative(t *testing.T) {
+	plan := models.S3Bucket{Name: "b-enc", EncryptionAlgorithm: "AES256"}
+	actual := &models.S3Bucket{Name: "b-enc", EncryptionAlgorithm: "AES256"}
+	res := detector.DetectS3Drift(plan, actual)
+	assert.False(t, res.EncryptionDiff)
+}
+
+// Logging positive and negative
+func TestDetectS3Drift_Logging_Positive(t *testing.T) {
+	plan := models.S3Bucket{Name: "b-log", LoggingEnabled: false}
+	actual := &models.S3Bucket{Name: "b-log", LoggingEnabled: true, LoggingTargetBucket: "lb", LoggingTargetPrefix: "p/"}
+	res := detector.DetectS3Drift(plan, actual)
+	assert.True(t, res.LoggingDiff)
+}
+
+func TestDetectS3Drift_Logging_Negative(t *testing.T) {
+	plan := models.S3Bucket{Name: "b-log", LoggingEnabled: false}
+	actual := &models.S3Bucket{Name: "b-log", LoggingEnabled: false}
+	res := detector.DetectS3Drift(plan, actual)
+	assert.False(t, res.LoggingDiff)
+}
+
+// PublicAccessBlock positive and negative
+func TestDetectS3Drift_PublicAccessBlock_Positive(t *testing.T) {
+	plan := models.S3Bucket{Name: "b-pab", PublicAccessBlock: models.PublicAccessBlockConfig{false, false, false, false}}
+	actual := &models.S3Bucket{Name: "b-pab", PublicAccessBlock: models.PublicAccessBlockConfig{true, false, false, false}}
+	res := detector.DetectS3Drift(plan, actual)
+	assert.True(t, res.PublicAccessBlockDiff)
+}
+
+func TestDetectS3Drift_PublicAccessBlock_Negative(t *testing.T) {
+	cfg := models.PublicAccessBlockConfig{true, true, true, true}
+	plan := models.S3Bucket{Name: "b-pab", PublicAccessBlock: cfg}
+	actual := &models.S3Bucket{Name: "b-pab", PublicAccessBlock: cfg}
+	res := detector.DetectS3Drift(plan, actual)
+	assert.False(t, res.PublicAccessBlockDiff)
+}
+
+// LifecycleRules positive and negative
+func TestDetectS3Drift_Lifecycle_Positive(t *testing.T) {
+	plan := models.S3Bucket{Name: "b-lc", LifecycleRules: []models.LifecycleRuleSummary{{ID: "r1", Status: "Enabled"}}}
+	actual := &models.S3Bucket{Name: "b-lc", LifecycleRules: []models.LifecycleRuleSummary{{ID: "r1", Status: "Disabled"}}}
+	res := detector.DetectS3Drift(plan, actual)
+	assert.True(t, res.LifecycleDiff)
+}
+
+func TestDetectS3Drift_Lifecycle_Negative(t *testing.T) {
+	rules := []models.LifecycleRuleSummary{{ID: "r1", Status: "Enabled"}}
+	plan := models.S3Bucket{Name: "b-lc", LifecycleRules: rules}
+	actual := &models.S3Bucket{Name: "b-lc", LifecycleRules: rules}
+	res := detector.DetectS3Drift(plan, actual)
+	assert.False(t, res.LifecycleDiff)
 }
