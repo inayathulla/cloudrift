@@ -72,15 +72,46 @@ Example of plan.json
           "bucket": "cloudrift",
           "acl": "private",
           "tags": {
-            "env": "dev",
+            "env": "abc",
             "owner": "security"
-          }
+          },
+          "versioning": {
+            "enabled": false
+          },
+          "server_side_encryption_configuration": {
+            "rules": [
+              {
+                "apply_server_side_encryption_by_default": {
+                  "sse_algorithm": "AES256"
+                }
+              }
+            ]
+          },
+          "logging": {
+            "target_bucket": "cloudrift-logs",
+            "target_prefix": "logs/"
+          },
+          "public_access_block": {
+            "block_public_acls": true,
+            "ignore_public_acls": true,
+            "block_public_policy": false,
+            "restrict_public_buckets": false
+          },
+          "lifecycle_rule": [
+            {
+              "id": "expire-old-objects",
+              "status": "Enabled",
+              "prefix": "",
+              "expiration": {
+                "days": 90
+              }
+            }
+          ]
         }
       }
     }
   ]
 }
-
 ```
 
 ### 3. Update Cloudrift config (cloudrift.yaml)
@@ -130,7 +161,8 @@ Example output file (on your host):
 ./drift-reports/drift-report_20250623_113445.txt
 ```
 ## 📸 Demo
-![initial-demo.gif](assets/initial-demo.gif)
+<!-- ![initial-demo.gif](assets/initial-demo.gif) -->
+![s3_enhanced.gif](assets/s3_enhanced.gif)
 
 ---
 ## 🤝 Contributing
