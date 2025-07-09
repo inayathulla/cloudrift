@@ -162,8 +162,7 @@ Example output file (on your host):
 ```
 ## 📸 Demo
 <!-- ![initial-demo.gif](assets/initial-demo.gif) -->
-![s3_enhanced.gif](assets/s3_enhanced.gif)
-
+![s3_scanning.gif](assets/s3_scanning.gif)
 ---
 ## 🤝 Contributing
 
