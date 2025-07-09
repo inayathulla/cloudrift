@@ -4,7 +4,10 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/briandowns/spinner"
+	"github.com/fatih/color"
 	"github.com/inayathulla/cloudrift/internal/common"
 	"github.com/inayathulla/cloudrift/internal/detector"
 	"github.com/inayathulla/cloudrift/internal/models"
@@ -25,94 +28,118 @@ var scanCmd = &cobra.Command{
 	Use:   "scan",
 	Short: "Scan for infrastructure drift",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("🚀 Starting Cloudrift scan...")
+		color.Cyan("🚀 Starting Cloudrift scan...")
 
-		// 1) Load YAML config
 		viper.SetConfigFile(configPath)
 		if err := viper.ReadInConfig(); err != nil {
-			fmt.Fprintf(os.Stderr, "❌ Failed to read config file: %v\n", err)
+			color.Red("❌ Failed to read config file: %v", err)
 			os.Exit(1)
 		}
 		profile, region, planPath, err := common.LoadAppConfig(configPath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "❌ Failed to load config: %v\n", err)
+			color.Red("❌ Failed to load config: %v", err)
 			os.Exit(1)
 		}
 		if planPath == "" {
-			fmt.Fprintln(os.Stderr, "❌ 'plan_path' not found in config")
+			color.Red("❌ 'plan_path' not found in config")
 			os.Exit(1)
 		}
 
-		// 2) Load AWS config and validate credentials
+		s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+		s.Color("cyan")
+
+		// 1. Loading AWS config
+		s.Suffix = " Loading AWS config..."
+		start := time.Now()
+		s.Start()
 		cfg, err := common.InitAWS(profile, region)
+		s.Stop()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "❌ Failed to load AWS config: %v\n", err)
+			color.Red("❌ Failed to load AWS config: %v", err)
 			os.Exit(1)
 		}
-		if err := common.ValidateCredentials(cfg); err != nil {
-			fmt.Fprintf(os.Stderr, "❌ Invalid AWS credentials: %v\n", err)
-			os.Exit(1)
-		}
+		color.Yellow("✔️  AWS config loaded in %s", time.Since(start).Round(time.Millisecond))
 
-		// 3) Print AWS caller identity
+		// 2. Validating credentials
+		s.Suffix = " Validating AWS credentials..."
+		start = time.Now()
+		s.Start()
+		err = common.ValidateCredentials(cfg)
+		s.Stop()
+		if err != nil {
+			color.Red("❌ Invalid AWS credentials: %v", err)
+			os.Exit(1)
+		}
+		color.Yellow("✔️  Credentials valid in %s", time.Since(start).Round(time.Millisecond))
+
+		// 3. Fetching AWS identity
+		s.Suffix = " Fetching AWS identity..."
+		start = time.Now()
+		s.Start()
 		identity, err := common.GetCallerIdentity(cfg)
+		s.Stop()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "❌ Failed to retrieve AWS identity: %v\n", err)
+			color.Red("❌ Failed to retrieve AWS identity: %v", err)
 			os.Exit(1)
 		}
-		fmt.Printf("🔐 Connected as: %s (%s)\n",
-			*identity.Arn, *identity.Account)
+		color.Green("🔐 Connected as: %s (%s) [%s] in %s", *identity.Arn, *identity.Account, region, time.Since(start).Round(time.Millisecond))
 
-		// 4) Load Terraform plan
+		// 4. Loading Terraform plan
+		s.Suffix = " Loading Terraform plan..."
+		start = time.Now()
+		s.Start()
 		planResources, err := common.LoadPlan(planPath)
+		s.Stop()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "❌ Failed to load plan: %v\n", err)
+			color.Red("❌ Failed to load plan: %v", err)
 			os.Exit(1)
 		}
-		fmt.Printf("📄 Plan loaded from json\n")
+		color.Yellow("📄 Plan loaded from json in %s", time.Since(start).Round(time.Millisecond))
 
-		// 5) Select the appropriate detector
+		// 5. Select the appropriate detector and printer
 		var det DriftDetector
+		var printer detector.DriftResultPrinter
+		var serviceName string
 		switch service {
 		case "s3":
 			det = detector.NewS3DriftDetector(cfg)
+			printer = detector.S3DriftResultPrinter{}
+			serviceName = "S3"
 		default:
-			fmt.Fprintf(os.Stderr, "❌ Unsupported service: %s\n", service)
+			color.Red("❌ Unsupported service: %s", service)
 			os.Exit(1)
 		}
 
-		// 6) Fetch live state
+		// 6. Fetching live state
+		s.Suffix = fmt.Sprintf(" Fetching live %s state...", serviceName)
+		start = time.Now()
+		s.Start()
 		rawLive, err := det.FetchLiveState()
+		s.Stop()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "❌ Failed to fetch live state: %v\n", err)
+			color.Red("❌ Failed to fetch live state: %v", err)
 			os.Exit(1)
 		}
+		color.Yellow("✔️  Live %s state fetched in %s", serviceName, time.Since(start).Round(time.Millisecond))
 
-		// 7) Cast to concrete type so we can inspect
+		// 7. Cast to concrete type so we can inspect
 		liveResources, ok := rawLive.([]models.S3Bucket)
 		if !ok {
-			fmt.Fprintf(os.Stderr, "❌ Unexpected live state type\n")
+			color.Red("❌ Unexpected live state type")
 			os.Exit(1)
 		}
 
-		// 8) Detect drift
+		// 8. Detect drift
+		start = time.Now()
 		results, err := det.DetectDrift(planResources, liveResources)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "❌ Drift detection failed: %v\n", err)
+			color.Red("❌ Drift detection failed: %v", err)
 			os.Exit(1)
 		}
+		color.Green("✔️  %s scan complete in %s!", serviceName, time.Since(start).Round(time.Millisecond))
+		fmt.Println()
 
-		// 9) Print drift results
-		var printer detector.DriftResultPrinter
-		switch service {
-		case "s3":
-			printer = detector.S3DriftResultPrinter{}
-			// Add more cases for other services as you implement them
-		default:
-			fmt.Fprintf(os.Stderr, "❌ Unsupported service: %s\n", service)
-			os.Exit(1)
-		}
-
+		// 9. Print drift results (all at once)
 		printer.PrintDrift(results, planResources, liveResources)
 	},
 }
