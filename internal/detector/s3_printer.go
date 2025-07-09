@@ -2,9 +2,9 @@ package detector
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/inayathulla/cloudrift/internal/models"
 )
 
@@ -15,59 +15,60 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 	liveBuckets, _ := live.([]models.S3Bucket)
 	s3Results, ok := results.([]DriftResult)
 	if !ok {
-		fmt.Fprintln(os.Stderr, "❌ Invalid drift result type for S3")
+		color.Red("❌ Invalid drift result type for S3")
 		return
 	}
+
+	total := len(planBuckets)
+	drifted := 0
+	nonDrifted := 0
+
 	if len(s3Results) == 0 {
-		fmt.Println("✅ No drift detected!")
+		color.Green("✅ No drift detected!")
 		return
 	}
-	fmt.Printf("⚠️ Drift in %d resource(s):\n", len(s3Results))
+
+	color.Yellow("⚠️ Drift detected!")
+
 	for _, r := range s3Results {
-		fmt.Printf("🪣 %s\n", r.BucketName)
+		// Print the bucket label as a colored heading (no box)
+		color.Yellow("🪣 %s", r.BucketName)
+
+		printedDrift := false
 
 		// Tags
 		if len(r.TagDiffs) > 0 || len(r.ExtraTags) > 0 {
-			fmt.Println("  🏷️ Tags:")
-			// Separate out mismatches, missing, and extras
+			fmt.Println(color.CyanString("  🏷️ Tags:"))
 			var mismatches []string
 			var missing []string
-
 			for key, diff := range r.TagDiffs {
 				expVal, liveVal := diff[0], diff[1]
 				if liveVal == "" {
-					// Key exists in plan but missing in live
 					missing = append(missing, fmt.Sprintf("%s:%s", key, expVal))
 				} else if expVal != liveVal {
-					// Value mismatch
-					mismatches = append(mismatches, fmt.Sprintf("%s:%s != %s:%s",
-						key, expVal, key, liveVal))
+					mismatches = append(mismatches, fmt.Sprintf("%s:%s != %s:%s", key, expVal, key, liveVal))
 				}
 			}
-
-			// 1) True mismatches
 			if len(mismatches) > 0 {
-				fmt.Println("    🔀 Mismatches:") // 4 spaces
+				fmt.Println(color.RedString("    🔀 Mismatches:"))
 				for _, m := range mismatches {
-					fmt.Printf("        • %s\n", m) // 8 spaces
+					fmt.Printf("        • %s\n", color.RedString(m))
 				}
+				printedDrift = true
 			}
-
-			// 2) Missing tags
 			if len(missing) > 0 {
-				fmt.Printf("    ⚠️ Missing:\n")
+				fmt.Println(color.YellowString("    ⚠️ Missing:"))
 				for _, m := range missing {
-					fmt.Printf("        • %s\n", m)
+					fmt.Printf("        • %s\n", color.YellowString(m))
 				}
+				printedDrift = true
 			}
-
-			// 3) Extra tags
 			if len(r.ExtraTags) > 0 {
-				fmt.Printf("    ➕")
-				fmt.Printf("  Extra:\n")
+				fmt.Println(color.YellowString("    ➕  Extra:"))
 				for key, val := range r.ExtraTags {
-					fmt.Printf("        • %s:%s\n", key, val)
+					fmt.Printf("        • %s\n", color.YellowString(fmt.Sprintf("%s:%s", key, val)))
 				}
+				printedDrift = true
 			}
 		}
 
@@ -75,24 +76,20 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 		if r.VersioningDiff {
 			planVer := getBool(planBuckets, r.BucketName, func(b models.S3Bucket) bool { return b.VersioningEnabled })
 			liveVer := getBoolLive(liveBuckets, r.BucketName, func(b models.S3Bucket) bool { return b.VersioningEnabled })
-			fmt.Printf(
-				"  🔄 Versioning mismatch:\n"+
-					"    • expected → enabled: %t\n"+
-					"    • actual   → enabled: %t\n",
-				planVer, liveVer,
-			)
+			fmt.Println(color.MagentaString("  🔄 Versioning mismatch:"))
+			fmt.Printf("    • expected → enabled: %s\n", color.YellowString(fmt.Sprintf("%t", planVer)))
+			fmt.Printf("    • actual   → enabled: %s\n", color.RedString(fmt.Sprintf("%t", liveVer)))
+			printedDrift = true
 		}
 
 		// Encryption
 		if r.EncryptionDiff {
 			planEnc := getString(planBuckets, r.BucketName, func(b models.S3Bucket) string { return b.EncryptionAlgorithm })
 			liveEnc := getStringLive(liveBuckets, r.BucketName, func(b models.S3Bucket) string { return b.EncryptionAlgorithm })
-			fmt.Printf(
-				"  🔐 Encryption mismatch:\n"+
-					"    • expected → %q\n"+
-					"    • actual   → %q\n",
-				planEnc, liveEnc,
-			)
+			fmt.Println(color.MagentaString("  🔐 Encryption mismatch:"))
+			fmt.Printf("    • expected → %s\n", color.YellowString(fmt.Sprintf("%q", planEnc)))
+			fmt.Printf("    • actual   → %s\n", color.RedString(fmt.Sprintf("%q", liveEnc)))
+			printedDrift = true
 		}
 
 		// Logging
@@ -100,12 +97,9 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 			planLogEnabled := getBool(planBuckets, r.BucketName, func(b models.S3Bucket) bool { return b.LoggingEnabled })
 			planLogBucket := getString(planBuckets, r.BucketName, func(b models.S3Bucket) string { return b.LoggingTargetBucket })
 			planLogPrefix := getString(planBuckets, r.BucketName, func(b models.S3Bucket) string { return b.LoggingTargetPrefix })
-
 			liveLogEnabled := getBoolLive(liveBuckets, r.BucketName, func(b models.S3Bucket) bool { return b.LoggingEnabled })
 			liveLogBucket := getStringLive(liveBuckets, r.BucketName, func(b models.S3Bucket) string { return b.LoggingTargetBucket })
 			liveLogPrefix := getStringLive(liveBuckets, r.BucketName, func(b models.S3Bucket) string { return b.LoggingTargetPrefix })
-
-			// Build the “plan” summary
 			planFields := []string{fmt.Sprintf("enabled=%t", planLogEnabled)}
 			if planLogBucket != "" {
 				planFields = append(planFields, fmt.Sprintf("bucket=%s", planLogBucket))
@@ -113,8 +107,6 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 			if planLogPrefix != "" {
 				planFields = append(planFields, fmt.Sprintf("prefix=%s", planLogPrefix))
 			}
-
-			// Build the “live” summary (only differing fields)
 			liveFields := []string{fmt.Sprintf("enabled=%t", liveLogEnabled)}
 			if liveLogBucket != planLogBucket && liveLogBucket != "" {
 				liveFields = append(liveFields, fmt.Sprintf("bucket=%s", liveLogBucket))
@@ -122,26 +114,22 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 			if liveLogPrefix != planLogPrefix && liveLogPrefix != "" {
 				liveFields = append(liveFields, fmt.Sprintf("prefix=%s", liveLogPrefix))
 			}
-
-			fmt.Println("  📑 Logging:")
-			fmt.Printf("    • plan → %s\n", strings.Join(planFields, ", "))
-			fmt.Printf("    • live → %s\n", strings.Join(liveFields, ", "))
+			fmt.Println(color.CyanString("  📑 Logging:"))
+			fmt.Printf("    • plan → %s\n", color.YellowString(strings.Join(planFields, ", ")))
+			fmt.Printf("    • live → %s\n", color.RedString(strings.Join(liveFields, ", ")))
+			printedDrift = true
 		}
 
 		// Public access block
 		if r.PublicAccessBlockDiff {
 			planPAB := getPAB(planBuckets, r.BucketName)
 			livePAB := getPABLive(liveBuckets, r.BucketName)
-
-			// Build plan summary with all flags
 			planFields := []string{
 				fmt.Sprintf("BlockPublicAcls=%t", planPAB.BlockPublicAcls),
 				fmt.Sprintf("IgnorePublicAcls=%t", planPAB.IgnorePublicAcls),
 				fmt.Sprintf("BlockPublicPolicy=%t", planPAB.BlockPublicPolicy),
 				fmt.Sprintf("RestrictPublicBuckets=%t", planPAB.RestrictPublicBuckets),
 			}
-
-			// Build live summary, only include flags that differ
 			liveFields := []string{}
 			if livePAB.BlockPublicAcls != planPAB.BlockPublicAcls {
 				liveFields = append(liveFields, fmt.Sprintf("BlockPublicAcls=%t", livePAB.BlockPublicAcls))
@@ -155,18 +143,16 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 			if livePAB.RestrictPublicBuckets != planPAB.RestrictPublicBuckets {
 				liveFields = append(liveFields, fmt.Sprintf("RestrictPublicBuckets=%t", livePAB.RestrictPublicBuckets))
 			}
-
-			fmt.Println("  🚫 Public Access Block differ:")
-			fmt.Printf("    • plan → %s\n", strings.Join(planFields, ", "))
-			fmt.Printf("    • live → %s\n", strings.Join(liveFields, ", "))
+			fmt.Println(color.CyanString("  🚫 Public Access Block differ:"))
+			fmt.Printf("    • plan → %s\n", color.YellowString(strings.Join(planFields, ", ")))
+			fmt.Printf("    • live → %s\n", color.RedString(strings.Join(liveFields, ", ")))
+			printedDrift = true
 		}
 
 		// Lifecycle
 		if r.LifecycleDiff {
 			planLC := getLifecycle(planBuckets, r.BucketName)
 			liveLC := getLifecycleLive(liveBuckets, r.BucketName)
-
-			// Maps for lookup
 			planMap := map[string]models.LifecycleRuleSummary{}
 			liveMap := map[string]models.LifecycleRuleSummary{}
 			for _, pr := range planLC {
@@ -175,10 +161,7 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 			for _, lr := range liveLC {
 				liveMap[lr.ID] = lr
 			}
-
-			fmt.Println("  ⏳ Lifecycle rules:")
-
-			// Mismatches
+			fmt.Println(color.CyanString("  ⏳ Lifecycle rules:"))
 			var mismatches []string
 			for id, pr := range planMap {
 				if lr, ok := liveMap[id]; ok {
@@ -188,16 +171,15 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 				}
 			}
 			if len(mismatches) > 0 {
-				fmt.Println("    • Mismatched rules:")
+				fmt.Println(color.RedString("    • Mismatched rules:"))
 				for _, id := range mismatches {
 					pr := planMap[id]
 					lr := liveMap[id]
 					fmt.Printf("        – %s: plan=Expires %d days (%s), live=Expires %d days (%s)\n",
 						id, pr.ExpirationDays, pr.Status, lr.ExpirationDays, lr.Status)
 				}
+				printedDrift = true
 			}
-
-			// Deleted
 			var deleted []string
 			for id := range planMap {
 				if _, ok := liveMap[id]; !ok {
@@ -205,7 +187,7 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 				}
 			}
 			if len(deleted) > 0 {
-				fmt.Println("    ⚠️ Deleted rules:")
+				fmt.Println(color.YellowString("    ⚠️ Deleted rules:"))
 				for _, id := range deleted {
 					pr := planMap[id]
 					fmt.Printf("        – %s:\n", id)
@@ -215,9 +197,8 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 						fmt.Printf("            • Prefix         : %s\n", pr.Prefix)
 					}
 				}
+				printedDrift = true
 			}
-
-			// Extra
 			var extras []string
 			for id := range liveMap {
 				if _, ok := planMap[id]; !ok {
@@ -225,7 +206,7 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 				}
 			}
 			if len(extras) > 0 {
-				fmt.Println("    • Extra rules:")
+				fmt.Println(color.YellowString("    • Extra rules:"))
 				for _, id := range extras {
 					lr := liveMap[id]
 					fmt.Printf("        – %s:\n", id)
@@ -235,9 +216,26 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 						fmt.Printf("            • Prefix         : %s\n", lr.Prefix)
 					}
 				}
+				printedDrift = true
 			}
 		}
+
+		if printedDrift {
+			drifted++
+		} else {
+			nonDrifted++
+			fmt.Println(color.GreenString("  ✅ No drift detected!"))
+		}
+		fmt.Println()
 	}
+
+	// Summary
+	color.Cyan(strings.Repeat("═", 44))
+	fmt.Println(color.CyanString("Summary:"))
+	fmt.Printf("  S3 Buckets scanned: %d\n", total)
+	fmt.Printf("  Buckets with drift: %d\n", drifted)
+	fmt.Printf("  Buckets without drift: %d\n", total-drifted)
+	color.Cyan(strings.Repeat("═", 44))
 }
 
 // Helper functions for S3 drift printing

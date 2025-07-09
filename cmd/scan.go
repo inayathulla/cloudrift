@@ -28,6 +28,7 @@ var scanCmd = &cobra.Command{
 	Use:   "scan",
 	Short: "Scan for infrastructure drift",
 	Run: func(cmd *cobra.Command, args []string) {
+		startScan := time.Now()
 		color.Cyan("🚀 Starting Cloudrift scan...")
 
 		viper.SetConfigFile(configPath)
@@ -70,7 +71,7 @@ var scanCmd = &cobra.Command{
 			color.Red("❌ Invalid AWS credentials: %v", err)
 			os.Exit(1)
 		}
-		color.Yellow("✔️  Credentials valid in %s", time.Since(start).Round(time.Millisecond))
+		color.Yellow("✔️  Credentials valided in %s", time.Since(start).Round(time.Millisecond))
 
 		// 3. Fetching AWS identity
 		s.Suffix = " Fetching AWS identity..."
@@ -130,13 +131,12 @@ var scanCmd = &cobra.Command{
 		}
 
 		// 8. Detect drift
-		start = time.Now()
 		results, err := det.DetectDrift(planResources, liveResources)
 		if err != nil {
 			color.Red("❌ Drift detection failed: %v", err)
 			os.Exit(1)
 		}
-		color.Green("✔️  %s scan complete in %s!", serviceName, time.Since(start).Round(time.Millisecond))
+		color.Green("✔️  Scan completed in %s!", time.Since(startScan).Round(time.Millisecond))
 		fmt.Println()
 
 		// 9. Print drift results (all at once)
