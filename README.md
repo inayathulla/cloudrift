@@ -4,13 +4,19 @@ Detect drift. Defend cloud.
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 ![Docker Pulls](https://img.shields.io/docker/pulls/inayathulla/cloudrift)
 [![Go Report Card](https://goreportcard.com/badge/github.com/inayathulla/cloudrift)](https://goreportcard.com/report/github.com/inayathulla/cloudrift)
+[![Featured in TLDR Sec](https://img.shields.io/badge/Featured%20in-TLDR%20Sec-blueviolet?logo=security&style=flat-square)](https://tldrsec.com/p/tldr-sec-287)
 ![GitHub stars](https://img.shields.io/github/stars/inayathulla/cloudrift?style=social)
 ![GitHub issues](https://img.shields.io/github/issues/inayathulla/cloudrift)
 ![Go Test](https://github.com/inayathulla/cloudrift/actions/workflows/tests.yml/badge.svg)
 
 🔍 **Cloudrift** is an open-source cloud drift detection tool that helps you identify when your cloud infrastructure no longer matches your Infrastructure-as-Code (IaC) — before it causes a security or compliance incident.
 
-## ✨ Features (coming soon)
+## 🚀 Featured
+
+> **Cloudrift was featured in [TLDR Sec #287](https://tldrsec.com/p/tldr-sec-287)** — one of the most respected newsletters in security engineering.  
+> Curated by [Clint Gibler](https://www.linkedin.com/in/clintgibler/), TLDR Sec is read by security teams at Google, Netflix, Segment, and many others.
+
+## ✨ Features (In Progress)
 - Detect drift between Terraform and live AWS state
 - Catch unmanaged or deleted cloud resources
 - Integrate into CI/CD pipelines
@@ -18,7 +24,7 @@ Detect drift. Defend cloud.
 - Simple CLI and JSON output
 
 ---
-## 🚀 Quick Start
+## 🏁 Quick Start
 ### Clone the repository
 ```bash
 git clone https://github.com/inayathulla/cloudrift.git
