@@ -17,11 +17,3 @@ func GetCallerIdentity(cfg sdkaws.Config) (*sts.GetCallerIdentityOutput, error) 
 	}
 	return out, nil
 }
-
-// SafeString returns a non-nil string.
-func SafeString(s *string) string {
-	if s == nil {
-		return "N/A"
-	}
-	return *s
-}

@@ -1,4 +1,3 @@
-// internal/parser/s3.go
 package parser
 
 import (

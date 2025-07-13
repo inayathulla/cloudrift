@@ -1,4 +1,3 @@
-// cmd/scan.go
 package cmd
 
 import (

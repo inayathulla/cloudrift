@@ -1,4 +1,3 @@
-// tests/internal/detector/s3_test.go
 package detector
 
 import (
