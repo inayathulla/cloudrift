@@ -16,6 +16,48 @@ Detect drift. Defend cloud.
 > **Cloudrift was featured in [TLDR Sec #287](https://tldrsec.com/p/tldr-sec-287)** — one of the most respected newsletters in security engineering.  
 > Curated by [Clint Gibler](https://www.linkedin.com/in/clintgibler/), TLDR Sec is read by security teams at Google, Netflix, Segment, and many others.
 
+---
+## 🔍 How Cloudrift Differs from Other Tools
+
+| Feature                          | Cloudrift                                | driftctl                                   | Terraform Drift Detect          |
+|----------------------------------|------------------------------------------|--------------------------------------------|---------------------------------|
+| **Source of Truth**              | Terraform Plan + Live AWS API            | Terraform State + Live AWS API             | Terraform State vs Live State   |
+| **Timing**                       | Pre-apply (Plan-only)                    | Post-apply                                 | Post-apply                      |
+| **Live Scan Independence**       | Separate AWS API scan, outside Terraform | In-memory Terraform refresh                | Terraform refresh only          |
+| **Output Format**                | JSON attribute-level diffs               | CLI output (limited JSON/JSONPath support) | Human-readable diff             |
+| **Custom Automation Integration**| Easy to ingest into dashboards & bots    | Requires parsing CLI output                | Not designed for machine parsing |
+---
+## 🎯 Who Benefits Most from Cloudrift
+
+Cloudrift’s plan-first, API-backed approach is a game-changer for teams that need reliable drift detection **before** they hit “apply.” Here’s who gets the biggest lift:
+
+1. **Early-stage Startups & Small Teams**
+    - **Challenge:** No formal change-management process, manual reviews, high risk of “it worked in dev” surprises in prod.
+    - **Example:**  
+      RockingAI has a 4-engineer team managing customer data buckets in S3. An engineer bumps the bucket ACL to “public-read” in a local plan—but the mistake isn’t caught until after apply, exposing data.
+    - **Cloudrift Benefit:**
+        - Runs a plan-only scan and flags “public-read” on the S3 ACL **before** any changes land in AWS.
+        - Emits a JSON diff that’s trivial to feed into a Slack bot or GitHub check run, enforcing guardrails with zero human toil.
+
+2. **DevOps & Infrastructure Teams**
+    - **Challenge:** You’ve got multiple environments (dev/stage/prod), rotating credentials and policies, and periodic compliance audits—but nobody’s tracking what drifted since last deploy.
+    - **Example:**  
+      FinHealthCo rotates IAM roles weekly. Last month, a stale policy attachment remained in prod and slipped through manual audits.
+    - **Cloudrift Benefit:**
+        - Schedules daily plan-only scans against prod via AWS API.
+        - Generates machine-readable attribute diffs (e.g. removed policy ARN), driving automated remediation or alerts before drift accumulates.
+
+3. **Compliance & Security-Focused Organizations**
+    - **Challenge:** Auditors demand an immutable record of what **would** change, and when—not just what **did** change. State-vs-live tools only tell you post-apply mismatches.
+    - **Example:**  
+      RegulaBank needs proof that no security groups are ever opened to 0.0.0.0/0 without a policy exception.
+    - **Cloudrift Benefit:**
+        - Captures every denied change attempt in JSON logs, complete with timestamp and plan context.
+        - Serves as an auditable, pre-apply “drift guard” that slots straight into your SIEM or compliance dashboard.
+
+> **Why not driftctl or Terraform’s drift detect?**  
+> While tools like **driftctl** catch state-vs-live drift **after** you’ve applied, Cloudrift prevents misconfigurations *before* they ever reach AWS—ideal for lean teams that can’t afford manual checks or have audit mandates to prove “nothing unsafe ever ran.”
+---
 ## ✨ Features (In Progress)
 - Detect drift between Terraform and live AWS state
 - Catch unmanaged or deleted cloud resources
