@@ -221,13 +221,54 @@ Example output file (on your host):
 - Add unit tests for new components
 
 ### 📁 Code Structure
-    cmd/              ← CLI entrypoint 
-    internal/
-        aws/          ← AWS fetchers
-        detector/     ← Drift comparison logic
-        parser/       ← Terraform plan parsing
-        models/       ← Shared structs
+## Repository Layout
 
+An overview of the Cloudrift project structure:
+
+```text
+cloudrift/
+├── .github/
+│   └── workflows/                # CI workflows (YAML files)
+├── assets/
+│   └── s3_scanning.gif           # Demo GIF used in README
+├── cmd/                          # CLI entrypoint
+│   ├── root.go
+│   └── scan.go
+├── config/                       # Example configuration
+│   └── cloudrift.yml
+├── examples/                     # Sample Terraform + Cloudrift configs
+│   ├── compliance-export/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── config/cloudrift.yml
+│   └── vuln-export/
+│       ├── main.tf
+│       └── config/cloudrift.yml
+├── internal/                     # Core application internals
+│   ├── aws/                      # AWS API fetchers
+│   │   ├── s3_bucket.go
+│   │   └── …other fetchers…
+│   ├── common/                   # Shared utilities
+│   │   └── utils.go
+│   ├── detector/                 # Diff‑comparison logic
+│   │   └── detector.go
+│   ├── models/                   # Data models
+│   │   └── models.go
+│   └── parser/                   # Terraform plan parser
+│       └── parser.go
+├── tests/
+│   └── internal/                 # Unit tests for `internal/`
+│       ├── aws_test.go
+│       ├── detector_test.go
+│       ├── parser_test.go
+│       └── models_test.go
+├── Dockerfile
+├── README.md
+├── go.mod
+├── go.sum
+└── main.go                       # Application entrypoint
+
+```
 ### 🧪 Testing
 Before submitting a PR:
 ```bash
