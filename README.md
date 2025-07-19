@@ -248,7 +248,7 @@ Open an issue or reach out via GitHub Discussions
 Interested in working together, sponsoring Cloudrift, or showcasing how it’s helped your team? I’d love to hear from you!
 
 - **Get in Touch:**  
-  Email [inayathulla2020@gmail.com](mailto:inayathulla2020@gmail.com) or connect on LinkedIn [Inayathulla Khan Lavani](https://www.linkedin.com/in/inayathullakhanlavani) to discuss integrations, pilot programs, sponsorships, or to share your success story.
+  Email [inayathulla2020@gmail.com](mailto:inayathulla2020@gmail.com) or connect on LinkedIn [Inayathulla Khan Lavani](https://www.linkedin.com/in/inayathullakhan) to discuss integrations, pilot programs, sponsorships, or to share your success story.
 
 - **Share Your Case Study:**  
   Open an issue or PR to add your company logo and a brief write-up of your use case and outcomes—let’s celebrate real-world wins together!
