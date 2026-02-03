@@ -14,7 +14,21 @@ import (
 	"github.com/inayathulla/cloudrift/internal/models"
 )
 
-// FetchS3Buckets lists all buckets and their metadata in parallel.
+// FetchS3Buckets retrieves all S3 buckets and their configurations from AWS.
+//
+// This function lists all buckets in the account and fetches detailed metadata
+// for each bucket including ACL, tags, versioning, encryption, logging,
+// public access block settings, and lifecycle rules.
+//
+// Buckets that fail to fetch (e.g., due to permissions) are logged and skipped
+// rather than causing the entire operation to fail.
+//
+// Parameters:
+//   - cfg: AWS SDK configuration for API calls
+//
+// Returns:
+//   - []models.S3Bucket: slice of bucket configurations
+//   - error: if the ListBuckets call fails
 func FetchS3Buckets(cfg sdkaws.Config) ([]models.S3Bucket, error) {
 	ctx := context.Background()
 	client := s3.NewFromConfig(cfg)
@@ -40,7 +54,19 @@ func FetchS3Buckets(cfg sdkaws.Config) ([]models.S3Bucket, error) {
 	return out, nil
 }
 
-// fetchBucketState retrieves all relevant metadata for one bucket in parallel.
+// fetchBucketState retrieves all configuration attributes for a single S3 bucket.
+//
+// This function makes 7 parallel API calls to fetch:
+//   - ACL (GetBucketAcl)
+//   - Tags (GetBucketTagging)
+//   - Versioning (GetBucketVersioning)
+//   - Encryption (GetBucketEncryption)
+//   - Logging (GetBucketLogging)
+//   - Public Access Block (GetPublicAccessBlock)
+//   - Lifecycle Rules (GetBucketLifecycleConfiguration)
+//
+// Expected "not found" errors (e.g., NoSuchTagSet, NoSuchLifecycleConfiguration)
+// are gracefully handled and don't cause failures.
 func fetchBucketState(ctx context.Context, name string, client *s3.Client) (*models.S3Bucket, error) {
 	var (
 		aclResp *s3.GetBucketAclOutput
@@ -188,6 +214,11 @@ func fetchBucketState(ctx context.Context, name string, client *s3.Client) (*mod
 	return bucket, nil
 }
 
+// aclToString converts S3 grants to a simplified ACL string.
+//
+// This is a simplified interpretation: if any grant has FULL_CONTROL permission,
+// the bucket is considered "private"; otherwise, it's "public-read".
+// This heuristic works for common cases but may not capture all ACL nuances.
 func aclToString(grants []types.Grant) string {
 	for _, g := range grants {
 		if g.Permission == types.PermissionFullControl {

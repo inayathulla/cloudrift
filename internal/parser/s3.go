@@ -5,6 +5,26 @@ import (
 )
 
 // ParseS3Buckets extracts aws_s3_bucket resources from a Terraform plan.
+//
+// This function iterates through all resource changes in the plan and extracts
+// S3 bucket configurations from resources with type "aws_s3_bucket". It parses
+// the following attributes from each bucket:
+//
+//   - Bucket name and ACL
+//   - Tags
+//   - Versioning configuration
+//   - Server-side encryption settings
+//   - Access logging configuration
+//   - Public Access Block settings
+//   - Lifecycle rules
+//
+// Resources being deleted (with nil "after" state) are skipped.
+//
+// Parameters:
+//   - plan: pointer to a parsed TerraformPlan structure
+//
+// Returns:
+//   - []models.S3Bucket: slice of S3 bucket configurations found in the plan
 func ParseS3Buckets(plan *TerraformPlan) []models.S3Bucket {
 	var buckets []models.S3Bucket
 

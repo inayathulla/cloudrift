@@ -7,25 +7,56 @@ import (
 
 	"github.com/briandowns/spinner"
 	"github.com/fatih/color"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"github.com/inayathulla/cloudrift/internal/common"
 	"github.com/inayathulla/cloudrift/internal/detector"
 	"github.com/inayathulla/cloudrift/internal/models"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-var configPath string
-var service string // e.g. "s3", "ec2"
+// Command-line flags for the scan command.
+var (
+	configPath string // Path to cloudrift.yml configuration file
+	service    string // AWS service to scan (e.g., "s3", "ec2")
+)
 
-// DriftDetector defines the interface for any service-specific detector.
+// DriftDetector defines the interface for service-specific drift detectors.
+//
+// Each supported AWS service (S3, EC2, etc.) implements this interface
+// to provide consistent drift detection behavior across services.
 type DriftDetector interface {
+	// FetchLiveState retrieves the current state of resources from AWS.
 	FetchLiveState() (interface{}, error)
+
+	// DetectDrift compares planned state against live state and returns differences.
 	DetectDrift(plan interface{}, live interface{}) ([]detector.DriftResult, error)
 }
 
+// scanCmd implements the "cloudrift scan" subcommand.
+//
+// The scan command performs the following steps:
+//  1. Load configuration from cloudrift.yml
+//  2. Initialize AWS SDK and validate credentials
+//  3. Parse the Terraform plan JSON
+//  4. Fetch live state from AWS
+//  5. Compare plan vs live state
+//  6. Output drift results
 var scanCmd = &cobra.Command{
 	Use:   "scan",
 	Short: "Scan for infrastructure drift",
+	Long: `Scan compares your Terraform plan against live AWS infrastructure
+to detect configuration drift.
+
+The command reads a Terraform plan JSON file and fetches the current state
+of corresponding resources from AWS, then reports any differences found.
+
+Flags:
+  --config, -c    Path to cloudrift.yml configuration file
+  --service, -s   AWS service to scan (currently supports: s3)
+
+Example:
+  cloudrift scan --config=config/cloudrift.yml --service=s3`,
 	Run: func(cmd *cobra.Command, args []string) {
 		startScan := time.Now()
 		color.Cyan("🚀 Starting Cloudrift scan...")
