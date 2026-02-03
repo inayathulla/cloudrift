@@ -125,14 +125,16 @@ func fetchBucketState(ctx context.Context, name string, client *s3.Client) (*mod
 	}
 
 	// Build tags map, if any
-	tags := make(map[string]string)
-	if tagResp != nil {
+	var tags map[string]string
+	if tagResp != nil && len(tagResp.TagSet) > 0 {
 		tags = make(map[string]string, len(tagResp.TagSet))
 		for _, t := range tagResp.TagSet {
 			if t.Key != nil && t.Value != nil {
 				tags[*t.Key] = *t.Value
 			}
 		}
+	} else {
+		tags = make(map[string]string)
 	}
 
 	// Assemble the bucket model

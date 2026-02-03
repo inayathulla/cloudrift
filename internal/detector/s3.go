@@ -2,7 +2,6 @@ package detector
 
 import (
 	"fmt"
-	"reflect"
 
 	sdkaws "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/inayathulla/cloudrift/internal/aws"
@@ -99,13 +98,13 @@ func DetectS3Drift(plan models.S3Bucket, actual *models.S3Bucket) DriftResult {
 	}
 
 	// Public Access Block diff — compare unconditionally
-	if !reflect.DeepEqual(plan.PublicAccessBlock, actual.PublicAccessBlock) {
+	if !publicAccessBlockEqual(plan.PublicAccessBlock, actual.PublicAccessBlock) {
 		res.PublicAccessBlockDiff = true
 	}
 
 	// Lifecycle rules diff (only if plan defined any rules)
 	if len(plan.LifecycleRules) > 0 {
-		if !reflect.DeepEqual(plan.LifecycleRules, actual.LifecycleRules) {
+		if !lifecycleRulesEqual(plan.LifecycleRules, actual.LifecycleRules) {
 			res.LifecycleDiff = true
 		}
 	}
@@ -115,13 +114,12 @@ func DetectS3Drift(plan models.S3Bucket, actual *models.S3Bucket) DriftResult {
 
 // DetectAllS3Drift runs detection across all buckets.
 func DetectAllS3Drift(plans, lives []models.S3Bucket) []DriftResult {
-	m := map[string]*models.S3Bucket{}
+	m := make(map[string]*models.S3Bucket, len(lives))
 	for i := range lives {
-		b := lives[i]
-		m[b.Name] = &b
+		m[lives[i].Name] = &lives[i]
 	}
 
-	var out []DriftResult
+	out := make([]DriftResult, 0, len(plans))
 	for _, p := range plans {
 		dr := DetectS3Drift(p, m[p.Name])
 		if dr.Missing ||
@@ -137,4 +135,28 @@ func DetectAllS3Drift(plans, lives []models.S3Bucket) []DriftResult {
 		}
 	}
 	return out
+}
+
+// publicAccessBlockEqual compares two PublicAccessBlockConfig structs.
+func publicAccessBlockEqual(a, b models.PublicAccessBlockConfig) bool {
+	return a.BlockPublicAcls == b.BlockPublicAcls &&
+		a.IgnorePublicAcls == b.IgnorePublicAcls &&
+		a.BlockPublicPolicy == b.BlockPublicPolicy &&
+		a.RestrictPublicBuckets == b.RestrictPublicBuckets
+}
+
+// lifecycleRulesEqual compares two slices of LifecycleRuleSummary.
+func lifecycleRulesEqual(a, b []models.LifecycleRuleSummary) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].ID != b[i].ID ||
+			a[i].Status != b[i].Status ||
+			a[i].Prefix != b[i].Prefix ||
+			a[i].ExpirationDays != b[i].ExpirationDays {
+			return false
+		}
+	}
+	return true
 }

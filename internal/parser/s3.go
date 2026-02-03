@@ -91,7 +91,6 @@ func ParseS3Buckets(plan *TerraformPlan) []models.S3Bucket {
 		}
 
 		// 8) Lifecycle Rules
-		// 8) Lifecycle Rules
 		if lcRaw, ok := after["lifecycle_rule"].([]interface{}); ok {
 			for _, raw := range lcRaw {
 				if m, ok := raw.(map[string]interface{}); ok {

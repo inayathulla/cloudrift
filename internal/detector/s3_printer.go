@@ -11,12 +11,30 @@ import (
 type S3DriftResultPrinter struct{}
 
 func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interface{}) {
-	planBuckets, _ := plan.([]models.S3Bucket)
-	liveBuckets, _ := live.([]models.S3Bucket)
 	s3Results, ok := results.([]DriftResult)
 	if !ok {
 		color.Red("❌ Invalid drift result type for S3")
 		return
+	}
+	planBuckets, ok := plan.([]models.S3Bucket)
+	if !ok {
+		color.Red("❌ Invalid plan type for S3")
+		return
+	}
+	liveBuckets, ok := live.([]models.S3Bucket)
+	if !ok {
+		color.Red("❌ Invalid live type for S3")
+		return
+	}
+
+	// Build maps for O(1) lookup instead of O(n) linear search
+	planMap := make(map[string]*models.S3Bucket, len(planBuckets))
+	for i := range planBuckets {
+		planMap[planBuckets[i].Name] = &planBuckets[i]
+	}
+	liveMap := make(map[string]*models.S3Bucket, len(liveBuckets))
+	for i := range liveBuckets {
+		liveMap[liveBuckets[i].Name] = &liveBuckets[i]
 	}
 
 	total := len(planBuckets)
@@ -74,8 +92,13 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 
 		// Versioning
 		if r.VersioningDiff {
-			planVer := getBool(planBuckets, r.BucketName, func(b models.S3Bucket) bool { return b.VersioningEnabled })
-			liveVer := getBoolLive(liveBuckets, r.BucketName, func(b models.S3Bucket) bool { return b.VersioningEnabled })
+			var planVer, liveVer bool
+			if b := planMap[r.BucketName]; b != nil {
+				planVer = b.VersioningEnabled
+			}
+			if b := liveMap[r.BucketName]; b != nil {
+				liveVer = b.VersioningEnabled
+			}
 			fmt.Println(color.MagentaString("  🔄 Versioning mismatch:"))
 			fmt.Printf("    • expected → enabled: %s\n", color.YellowString(fmt.Sprintf("%t", planVer)))
 			fmt.Printf("    • actual   → enabled: %s\n", color.RedString(fmt.Sprintf("%t", liveVer)))
@@ -84,8 +107,13 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 
 		// Encryption
 		if r.EncryptionDiff {
-			planEnc := getString(planBuckets, r.BucketName, func(b models.S3Bucket) string { return b.EncryptionAlgorithm })
-			liveEnc := getStringLive(liveBuckets, r.BucketName, func(b models.S3Bucket) string { return b.EncryptionAlgorithm })
+			var planEnc, liveEnc string
+			if b := planMap[r.BucketName]; b != nil {
+				planEnc = b.EncryptionAlgorithm
+			}
+			if b := liveMap[r.BucketName]; b != nil {
+				liveEnc = b.EncryptionAlgorithm
+			}
 			fmt.Println(color.MagentaString("  🔐 Encryption mismatch:"))
 			fmt.Printf("    • expected → %s\n", color.YellowString(fmt.Sprintf("%q", planEnc)))
 			fmt.Printf("    • actual   → %s\n", color.RedString(fmt.Sprintf("%q", liveEnc)))
@@ -94,12 +122,18 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 
 		// Logging
 		if r.LoggingDiff {
-			planLogEnabled := getBool(planBuckets, r.BucketName, func(b models.S3Bucket) bool { return b.LoggingEnabled })
-			planLogBucket := getString(planBuckets, r.BucketName, func(b models.S3Bucket) string { return b.LoggingTargetBucket })
-			planLogPrefix := getString(planBuckets, r.BucketName, func(b models.S3Bucket) string { return b.LoggingTargetPrefix })
-			liveLogEnabled := getBoolLive(liveBuckets, r.BucketName, func(b models.S3Bucket) bool { return b.LoggingEnabled })
-			liveLogBucket := getStringLive(liveBuckets, r.BucketName, func(b models.S3Bucket) string { return b.LoggingTargetBucket })
-			liveLogPrefix := getStringLive(liveBuckets, r.BucketName, func(b models.S3Bucket) string { return b.LoggingTargetPrefix })
+			var planLogEnabled, liveLogEnabled bool
+			var planLogBucket, planLogPrefix, liveLogBucket, liveLogPrefix string
+			if b := planMap[r.BucketName]; b != nil {
+				planLogEnabled = b.LoggingEnabled
+				planLogBucket = b.LoggingTargetBucket
+				planLogPrefix = b.LoggingTargetPrefix
+			}
+			if b := liveMap[r.BucketName]; b != nil {
+				liveLogEnabled = b.LoggingEnabled
+				liveLogBucket = b.LoggingTargetBucket
+				liveLogPrefix = b.LoggingTargetPrefix
+			}
 			planFields := []string{fmt.Sprintf("enabled=%t", planLogEnabled)}
 			if planLogBucket != "" {
 				planFields = append(planFields, fmt.Sprintf("bucket=%s", planLogBucket))
@@ -122,8 +156,13 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 
 		// Public access block
 		if r.PublicAccessBlockDiff {
-			planPAB := getPAB(planBuckets, r.BucketName)
-			livePAB := getPABLive(liveBuckets, r.BucketName)
+			var planPAB, livePAB models.PublicAccessBlockConfig
+			if b := planMap[r.BucketName]; b != nil {
+				planPAB = b.PublicAccessBlock
+			}
+			if b := liveMap[r.BucketName]; b != nil {
+				livePAB = b.PublicAccessBlock
+			}
 			planFields := []string{
 				fmt.Sprintf("BlockPublicAcls=%t", planPAB.BlockPublicAcls),
 				fmt.Sprintf("IgnorePublicAcls=%t", planPAB.IgnorePublicAcls),
@@ -151,20 +190,25 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 
 		// Lifecycle
 		if r.LifecycleDiff {
-			planLC := getLifecycle(planBuckets, r.BucketName)
-			liveLC := getLifecycleLive(liveBuckets, r.BucketName)
-			planMap := map[string]models.LifecycleRuleSummary{}
-			liveMap := map[string]models.LifecycleRuleSummary{}
+			var planLC, liveLC []models.LifecycleRuleSummary
+			if b := planMap[r.BucketName]; b != nil {
+				planLC = b.LifecycleRules
+			}
+			if b := liveMap[r.BucketName]; b != nil {
+				liveLC = b.LifecycleRules
+			}
+			planLCMap := make(map[string]models.LifecycleRuleSummary, len(planLC))
+			liveLCMap := make(map[string]models.LifecycleRuleSummary, len(liveLC))
 			for _, pr := range planLC {
-				planMap[pr.ID] = pr
+				planLCMap[pr.ID] = pr
 			}
 			for _, lr := range liveLC {
-				liveMap[lr.ID] = lr
+				liveLCMap[lr.ID] = lr
 			}
 			fmt.Println(color.CyanString("  ⏳ Lifecycle rules:"))
 			var mismatches []string
-			for id, pr := range planMap {
-				if lr, ok := liveMap[id]; ok {
+			for id, pr := range planLCMap {
+				if lr, ok := liveLCMap[id]; ok {
 					if pr.ExpirationDays != lr.ExpirationDays || pr.Status != lr.Status || pr.Prefix != lr.Prefix {
 						mismatches = append(mismatches, id)
 					}
@@ -173,23 +217,23 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 			if len(mismatches) > 0 {
 				fmt.Println(color.RedString("    • Mismatched rules:"))
 				for _, id := range mismatches {
-					pr := planMap[id]
-					lr := liveMap[id]
+					pr := planLCMap[id]
+					lr := liveLCMap[id]
 					fmt.Printf("        – %s: plan=Expires %d days (%s), live=Expires %d days (%s)\n",
 						id, pr.ExpirationDays, pr.Status, lr.ExpirationDays, lr.Status)
 				}
 				printedDrift = true
 			}
 			var deleted []string
-			for id := range planMap {
-				if _, ok := liveMap[id]; !ok {
+			for id := range planLCMap {
+				if _, ok := liveLCMap[id]; !ok {
 					deleted = append(deleted, id)
 				}
 			}
 			if len(deleted) > 0 {
 				fmt.Println(color.YellowString("    ⚠️ Deleted rules:"))
 				for _, id := range deleted {
-					pr := planMap[id]
+					pr := planLCMap[id]
 					fmt.Printf("        – %s:\n", id)
 					fmt.Printf("            • Status         : %s\n", pr.Status)
 					fmt.Printf("            • Expires after  : %d days\n", pr.ExpirationDays)
@@ -200,15 +244,15 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 				printedDrift = true
 			}
 			var extras []string
-			for id := range liveMap {
-				if _, ok := planMap[id]; !ok {
+			for id := range liveLCMap {
+				if _, ok := planLCMap[id]; !ok {
 					extras = append(extras, id)
 				}
 			}
 			if len(extras) > 0 {
 				fmt.Println(color.YellowString("    • Extra rules:"))
 				for _, id := range extras {
-					lr := liveMap[id]
+					lr := liveLCMap[id]
 					fmt.Printf("        – %s:\n", id)
 					fmt.Printf("            • Status         : %s\n", lr.Status)
 					fmt.Printf("            • Expires after  : %d days\n", lr.ExpirationDays)
@@ -236,58 +280,4 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 	fmt.Printf("  Buckets with drift: %d\n", drifted)
 	fmt.Printf("  Buckets without drift: %d\n", total-drifted)
 	color.Cyan(strings.Repeat("═", 44))
-}
-
-// Helper functions for S3 drift printing
-func getBucket(plan []models.S3Bucket, name string) *models.S3Bucket {
-	for _, b := range plan {
-		if b.Name == name {
-			return &b
-		}
-	}
-	return nil
-}
-
-func getBool(plan []models.S3Bucket, name string, fn func(models.S3Bucket) bool) bool {
-	if b := getBucket(plan, name); b != nil {
-		return fn(*b)
-	}
-	return false
-}
-
-func getBoolLive(live []models.S3Bucket, name string, fn func(models.S3Bucket) bool) bool {
-	return getBool(live, name, fn)
-}
-
-func getString(plan []models.S3Bucket, name string, fn func(models.S3Bucket) string) string {
-	if b := getBucket(plan, name); b != nil {
-		return fn(*b)
-	}
-	return ""
-}
-
-func getStringLive(live []models.S3Bucket, name string, fn func(models.S3Bucket) string) string {
-	return getString(live, name, fn)
-}
-
-func getPAB(plan []models.S3Bucket, name string) models.PublicAccessBlockConfig {
-	if b := getBucket(plan, name); b != nil {
-		return b.PublicAccessBlock
-	}
-	return models.PublicAccessBlockConfig{}
-}
-
-func getPABLive(live []models.S3Bucket, name string) models.PublicAccessBlockConfig {
-	return getPAB(live, name)
-}
-
-func getLifecycle(plan []models.S3Bucket, name string) []models.LifecycleRuleSummary {
-	if b := getBucket(plan, name); b != nil {
-		return b.LifecycleRules
-	}
-	return nil
-}
-
-func getLifecycleLive(live []models.S3Bucket, name string) []models.LifecycleRuleSummary {
-	return getLifecycle(live, name)
 }
