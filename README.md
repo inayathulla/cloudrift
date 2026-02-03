@@ -1,160 +1,135 @@
-# cloudrift
-Detect drift. Defend cloud.
+<p align="center">
+  <h1 align="center">Cloudrift</h1>
+  <p align="center">
+    <strong>Detect drift. Defend cloud.</strong>
+  </p>
+  <p align="center">
+    Pre-apply drift detection for Terraform and AWS
+  </p>
+</p>
 
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-![Docker Pulls](https://img.shields.io/docker/pulls/inayathulla/cloudrift)
-[![Go Report Card](https://goreportcard.com/badge/github.com/inayathulla/cloudrift)](https://goreportcard.com/report/github.com/inayathulla/cloudrift)
-[![Featured in TLDR Sec](https://img.shields.io/badge/Featured%20in-TLDR%20Sec-blueviolet?logo=security&style=flat-square)](https://tldrsec.com/p/tldr-sec-287)
-![GitHub stars](https://img.shields.io/github/stars/inayathulla/cloudrift?style=social)
-![GitHub issues](https://img.shields.io/github/issues/inayathulla/cloudrift)
-![Go Test](https://github.com/inayathulla/cloudrift/actions/workflows/tests.yml/badge.svg)
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
+  <a href="https://goreportcard.com/report/github.com/inayathulla/cloudrift"><img src="https://goreportcard.com/badge/github.com/inayathulla/cloudrift" alt="Go Report Card"></a>
+  <a href="https://github.com/inayathulla/cloudrift/actions/workflows/tests.yml"><img src="https://github.com/inayathulla/cloudrift/actions/workflows/tests.yml/badge.svg" alt="Go Test"></a>
+  <a href="https://hub.docker.com/r/inayathulla/cloudrift"><img src="https://img.shields.io/docker/pulls/inayathulla/cloudrift" alt="Docker Pulls"></a>
+  <a href="https://github.com/inayathulla/cloudrift/stargazers"><img src="https://img.shields.io/github/stars/inayathulla/cloudrift?style=social" alt="GitHub stars"></a>
+</p>
 
-🔍 **Cloudrift** is an open-source cloud drift detection tool that helps you identify when your cloud infrastructure no longer matches your Infrastructure-as-Code (IaC) — before it causes a security or compliance incident.
-
-## 🚀 Featured
-
-> **Cloudrift was featured in [TLDR Sec #287](https://tldrsec.com/p/tldr-sec-287)** — one of the most respected newsletters in security engineering.  
-> Curated by [Clint Gibler](https://www.linkedin.com/in/clintgibler/), TLDR Sec is read by security teams at Google, Netflix, Segment, and many others.
-
----
-## 🔍 How Cloudrift Differs from Other Tools
-
-| Feature                          | Cloudrift                                | driftctl                                   | Terraform Drift Detect          |
-|----------------------------------|------------------------------------------|--------------------------------------------|---------------------------------|
-| **Source of Truth**              | Terraform Plan + Live AWS API            | Terraform State + Live AWS API             | Terraform State vs Live State   |
-| **Timing**                       | Pre-apply (Plan-only)                    | Post-apply                                 | Post-apply                      |
-| **Live Scan Independence**       | Separate AWS API scan, outside Terraform | In-memory Terraform refresh                | Terraform refresh only          |
-| **Output Format**                | JSON attribute-level diffs               | CLI output (limited JSON/JSONPath support) | Human-readable diff             |
-| **Custom Automation Integration**| Easy to ingest into dashboards & bots    | Requires parsing CLI output                | Not designed for machine parsing |
----
-## 🎯 Who Benefits Most from Cloudrift
-
-Cloudrift’s plan-first, API-backed approach is a game-changer for teams that need reliable drift detection **before** they hit “apply.” Here’s who gets the biggest lift:
-
-1. **Early-stage Startups & Small Teams**
-    - **Challenge:** No formal change-management process, manual reviews, high risk of “it worked in dev” surprises in prod.
-    - **Example:**  
-      RockingAI has a 4-engineer team managing customer data buckets in S3. An engineer bumps the bucket ACL to “public-read” in a local plan—but the mistake isn’t caught until after apply, exposing data.
-    - **Cloudrift Benefit:**
-        - Runs a plan-only scan and flags “public-read” on the S3 ACL **before** any changes land in AWS.
-        - Emits a JSON diff that’s trivial to feed into a Slack bot or GitHub check run, enforcing guardrails with zero human toil.
-
-2. **DevOps & Infrastructure Teams**
-    - **Challenge:** You’ve got multiple environments (dev/stage/prod), rotating credentials and policies, and periodic compliance audits—but nobody’s tracking what drifted since last deploy.
-    - **Example:**  
-      FinHealthCo rotates IAM roles weekly. Last month, a stale policy attachment remained in prod and slipped through manual audits.
-    - **Cloudrift Benefit:**
-        - Schedules daily plan-only scans against prod via AWS API.
-        - Generates machine-readable attribute diffs (e.g. removed policy ARN), driving automated remediation or alerts before drift accumulates.
-
-3. **Compliance & Security-Focused Organizations**
-    - **Challenge:** Auditors demand an immutable record of what **would** change, and when—not just what **did** change. State-vs-live tools only tell you post-apply mismatches.
-    - **Example:**  
-      RegulaBank needs proof that no security groups are ever opened to 0.0.0.0/0 without a policy exception.
-    - **Cloudrift Benefit:**
-        - Captures every denied change attempt in JSON logs, complete with timestamp and plan context.
-        - Serves as an auditable, pre-apply “drift guard” that slots straight into your SIEM or compliance dashboard.
-
-> **Why not driftctl or Terraform’s drift detect?**  
-> While tools like **driftctl** catch state-vs-live drift **after** you’ve applied, Cloudrift prevents misconfigurations *before* they ever reach AWS—ideal for lean teams that can’t afford manual checks or have audit mandates to prove “nothing unsafe ever ran.”
----
-## ✨ Features (In Progress)
-- Detect drift between Terraform and live AWS state
-- Catch unmanaged or deleted cloud resources
-- Integrate into CI/CD pipelines
-- Slack/email notifications
-- Simple CLI and JSON output
+<p align="center">
+  <a href="https://tldrsec.com/p/tldr-sec-287"><img src="https://img.shields.io/badge/Featured%20in-TLDR%20Sec%20%23287-blueviolet?logo=security&style=flat-square" alt="Featured in TLDR Sec"></a>
+</p>
 
 ---
-## 🏁 Quick Start
-### Clone the repository
+
+**Cloudrift** is an open-source drift detection tool that compares your Terraform plan against live AWS infrastructure — catching misconfigurations **before** `terraform apply`, not after.
+
+![Demo](assets/s3_scanning.gif)
+
+## Table of Contents
+
+- [Why Cloudrift?](#why-cloudrift)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [How It Works](#how-it-works)
+- [Use Cases](#use-cases)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Why Cloudrift?
+
+Unlike post-apply tools like `driftctl` or Terraform's built-in drift detection, Cloudrift operates on your **Terraform plan** — giving you a safety net before changes reach production.
+
+| Feature | Cloudrift | driftctl | Terraform Drift Detect |
+|---------|-----------|----------|------------------------|
+| **Source of Truth** | Terraform Plan + Live AWS API | Terraform State + Live AWS API | Terraform State vs Live State |
+| **Timing** | Pre-apply | Post-apply | Post-apply |
+| **Output Format** | JSON attribute-level diffs | CLI output | Human-readable diff |
+| **CI/CD Integration** | Native JSON for automation | Requires parsing | Not designed for automation |
+
+## Installation
+
+### Via Go
+
 ```bash
-git clone https://github.com/inayathulla/cloudrift.git
-cd cloudrift
+go install github.com/inayathulla/cloudrift@latest
 ```
-### 🔁 Using Cloudrift with your own Terraform projects
 
-Cloudrift is designed to be used by developers to detect cloud resource drift in their own Terraform-based infrastructure projects.
+Ensure `$GOPATH/bin` is in your PATH:
 
-### ✅ Example: compliance-export or vuln-export projects
-
-Assume you have Terraform code stored in your repositories:
-You will need to create config folder and place cloudrift.yml file.
-
-```
-~/projects/
-├── compliance-export/
-│   ├── main.tf
-│   ├── variables.tf
-│   ├── config/
-│       └── cloudrift.yml
-│   └── ...
-└── vuln-export/
-    ├── main.tf
-    ├── config/
-    │    └── cloudrift.yml
-    └── ...
-```
-### 1. Navigate to your Terraform project
 ```bash
-cd ~/projects/compliance-export
+export PATH="$HOME/go/bin:$PATH"
 ```
 
-### 2. Generate a Terraform plan
+### Via Docker
+
 ```bash
+docker pull inayathulla/cloudrift
+```
+
+## Quick Start
+
+### 1. Generate a Terraform plan
+
+```bash
+cd your-terraform-project
 terraform init
-terraform plan -out=compliance.binary
-terraform show -json compliance.binary > plan.json
+terraform plan -out=tfplan.binary
+terraform show -json tfplan.binary > plan.json
 ```
-Example of plan.json 
+
+### 2. Create a configuration file
+
+Create `config/cloudrift.yml`:
+
+```yaml
+aws_profile: default
+region: us-east-1
+plan_path: ./plan.json
+```
+
+### 3. Run Cloudrift
+
+**With Go:**
+
+```bash
+cloudrift scan --config=config/cloudrift.yml --service=s3
+```
+
+**With Docker:**
+
+```bash
+docker run --rm \
+  -v $(pwd):/app \
+  -v ~/.aws:/root/.aws:ro \
+  inayathulla/cloudrift \
+  cloudrift scan --config=/app/config/cloudrift.yml --service=s3
+```
+
+## Configuration
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| `aws_profile` | AWS credentials profile name | Yes |
+| `region` | AWS region to scan | Yes |
+| `plan_path` | Path to Terraform plan JSON | Yes |
+
+### Example plan.json structure
+
 ```json
 {
   "resource_changes": [
     {
-      "address": "aws_s3_bucket.cloudrift",
+      "address": "aws_s3_bucket.example",
       "type": "aws_s3_bucket",
-      "name": "cloudrift",
       "change": {
         "actions": ["create"],
         "after": {
-          "bucket": "cloudrift",
+          "bucket": "my-bucket",
           "acl": "private",
-          "tags": {
-            "env": "abc",
-            "owner": "security"
-          },
-          "versioning": {
-            "enabled": false
-          },
-          "server_side_encryption_configuration": {
-            "rules": [
-              {
-                "apply_server_side_encryption_by_default": {
-                  "sse_algorithm": "AES256"
-                }
-              }
-            ]
-          },
-          "logging": {
-            "target_bucket": "cloudrift-logs",
-            "target_prefix": "logs/"
-          },
-          "public_access_block": {
-            "block_public_acls": true,
-            "ignore_public_acls": true,
-            "block_public_policy": false,
-            "restrict_public_buckets": false
-          },
-          "lifecycle_rule": [
-            {
-              "id": "expire-old-objects",
-              "status": "Enabled",
-              "prefix": "",
-              "expiration": {
-                "days": 90
-              }
-            }
-          ]
+          "tags": { "env": "prod" },
+          "versioning": { "enabled": true }
         }
       }
     }
@@ -162,137 +137,125 @@ Example of plan.json
 }
 ```
 
-### 3. Update Cloudrift config (cloudrift.yaml)
+## How It Works
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Terraform Plan │────▶│    Cloudrift    │◀────│   AWS Live API  │
+│     (JSON)      │     │   Comparator    │     │     (S3, etc)   │
+└─────────────────┘     └────────┬────────┘     └─────────────────┘
+                                 │
+                                 ▼
+                        ┌─────────────────┐
+                        │  Drift Report   │
+                        │  (CLI / JSON)   │
+                        └─────────────────┘
+```
+
+1. **Parse** — Reads your Terraform plan JSON and extracts planned resource configurations
+2. **Fetch** — Queries AWS APIs in parallel to get current live state
+3. **Compare** — Detects attribute-level differences between plan and reality
+4. **Report** — Outputs colorized CLI results or structured JSON for automation
+
+### Supported Resources
+
+| Resource | Status |
+|----------|--------|
+| S3 Buckets | Available |
+| EC2 Instances | Planned |
+| IAM Roles | Planned |
+| Security Groups | Planned |
+
+## Use Cases
+
+### CI/CD Pipeline Integration
+
+Run Cloudrift in your pipeline to catch drift before deployment:
+
 ```yaml
-aws_profile: default
-region: us-east-1
-plan_path: ~/projects/compliance-export/plan.json
+# GitHub Actions example
+- name: Check for drift
+  run: |
+    cloudrift scan --config=config/cloudrift.yml --service=s3
 ```
 
-Repeat the same process for `vuln-export` or any other Terraform-based repo.
+### Scheduled Compliance Scans
 
----
+Detect configuration drift on a schedule to maintain compliance:
 
-## 📦 Installation
-
-### 💻 Option 1: Install via Go (Local development)
 ```bash
-go install github.com/inayathulla/cloudrift@latest
+# Cron job example
+0 9 * * * cloudrift scan --config=/path/to/cloudrift.yml --service=s3 >> /var/log/drift.log
 ```
-Make sure your `$GOPATH/bin` is in your `PATH`. Add this to your `~/.zshrc` or `~/.bashrc` if needed:
+
+### Pre-Deploy Safety Checks
+
+Validate that your intended changes won't conflict with manual changes made in AWS:
+
 ```bash
-export PATH="$HOME/go/bin:$PATH"
-```
-Then reload your terminal:
-```bash
-source ~/.zshrc
-```
-Now run:
-```bash
-cloudrift scan --config=config/cloudrift.yml
+terraform plan -out=tfplan.binary
+terraform show -json tfplan.binary > plan.json
+cloudrift scan --config=config/cloudrift.yml --service=s3
+terraform apply tfplan.binary  # Only if no unexpected drift
 ```
 
-### 🐳 Option 2: Run Cloudrift with Docker
-Make sure to mount your project directory using -v $(pwd):/app so the container can access your Terraform plan and config.
-```bash
-mkdir -p drift-reports
-
-docker run --rm \
-  -v $(pwd):/app \
-  inayathulla/cloudrift \
-  sh -c 'timestamp=$(date +%Y%m%d_%H%M%S) && \
-         cloudrift scan --config=/app/config/cloudrift.yml > /app/drift-reports/drift-report_$timestamp.txt'
+## Project Structure
 
 ```
-Example output file (on your host):
-```
-./drift-reports/drift-report_20250623_113445.txt
-```
-## 📸 Demo
-<!-- ![initial-demo.gif](assets/initial-demo.gif) -->
-![s3_scanning.gif](assets/s3_scanning.gif)
----
-## 🤝 Contributing
-
-### 🧪 Development Guidelines
-- Use clear commit messages (e.g., feat: add EC2 drift detection)
-- Keep code modular (e.g., one service = one detector)
-- Follow Go formatting: go fmt ./...
-- Add unit tests for new components
-
-### 📁 Code Structure
-## Repository Layout
-
-An overview of the Cloudrift project structure:
-
-```text
 cloudrift/
-├── .github/
-│   └── workflows/                # CI workflows (YAML files)
-├── assets/
-│   └── s3_scanning.gif           # Demo GIF used in README
-├── cmd/                          # CLI entrypoint
-│   ├── root.go
-│   └── scan.go
-├── config/                       # Example configuration
-│   └── cloudrift.yml
-├── examples/                     # Sample Terraform + Cloudrift configs
-│   ├── compliance-export/
-│   │   ├── main.tf
-│   │   ├── variables.tf
-│   │   └── config/cloudrift.yml
-│   └── vuln-export/
-│       ├── main.tf
-│       └── config/cloudrift.yml
-├── internal/                     # Core application internals
-│   ├── aws/                      # AWS API fetchers
-│   │   ├── s3_bucket.go
-│   │   └── …other fetchers…
-│   ├── common/                   # Shared utilities
-│   │   └── utils.go
-│   ├── detector/                 # Diff‑comparison logic
-│   │   └── detector.go
-│   ├── models/                   # Data models
-│   │   └── models.go
-│   └── parser/                   # Terraform plan parser
-│       └── parser.go
-├── tests/
-│   └── internal/                 # Unit tests for `internal/`
-│       ├── aws_test.go
-│       ├── detector_test.go
-│       ├── parser_test.go
-│       └── models_test.go
-├── Dockerfile
-├── README.md
-├── go.mod
-├── go.sum
-└── main.go                       # Application entrypoint
-
+├── cmd/                    # CLI commands
+├── internal/
+│   ├── aws/                # AWS API integrations
+│   ├── detector/           # Drift detection logic
+│   ├── models/             # Data structures
+│   └── parser/             # Terraform plan parser
+├── tests/                  # Unit tests
+├── config/                 # Example configuration
+└── examples/               # Sample Terraform projects
 ```
-### 🧪 Testing
-Before submitting a PR:
+
+## Contributing
+
+Contributions are welcome! Please read our contributing guidelines before submitting a PR.
+
+### Development
+
 ```bash
-go tests ./...
-```
-### 📬 Submitting a Pull Request
-- Push your branch
-- Open a pull request to main
-- Briefly explain what your change does and why
-- We'll review your PR and respond quickly 🙌
+# Clone the repository
+git clone https://github.com/inayathulla/cloudrift.git
+cd cloudrift
 
-### 🙋‍♂️ Questions or Feedback?
-Open an issue or reach out via GitHub Discussions
+# Build
+go build -o cloudrift main.go
+
+# Run tests
+go test ./...
+
+# Format code
+go fmt ./...
+```
+
+### Guidelines
+
+- Use clear commit messages (e.g., `feat: add EC2 drift detection`)
+- Keep code modular — one service per detector
+- Add unit tests for new components
+- Run `go fmt` before committing
+
+## Connect
+
+- **Issues & Features:** [GitHub Issues](https://github.com/inayathulla/cloudrift/issues)
+- **Email:** [inayathulla2020@gmail.com](mailto:inayathulla2020@gmail.com)
+- **LinkedIn:** [Inayathulla Khan Lavani](https://www.linkedin.com/in/inayathullakhan)
 
 ---
-## 🤝 Connect & Share Success Stories
 
-Interested in working together, sponsoring Cloudrift, or showcasing how it’s helped your team? I’d love to hear from you!
+## License
 
-- **Get in Touch:**  
-  Email [inayathulla2020@gmail.com](mailto:inayathulla2020@gmail.com) or connect on LinkedIn [Inayathulla Khan Lavani](https://www.linkedin.com/in/inayathullakhan) to discuss integrations, pilot programs, sponsorships, or to share your success story.
+[Apache License 2.0](LICENSE)
 
-- **Share Your Case Study:**  
-  Open an issue or PR to add your company logo and a brief write-up of your use case and outcomes—let’s celebrate real-world wins together!
+---
 
-## 📝 License
-Apache License 2.0
+<p align="center">
+  <sub>Built with care for the DevOps and Security community</sub>
+</p>
