@@ -46,7 +46,7 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 		return
 	}
 
-	color.Yellow("⚠️ Drift detected!")
+	color.Yellow("⚠️  Drift detected!")
 
 	for _, r := range s3Results {
 		// Print the bucket label as a colored heading (no box)
@@ -56,7 +56,7 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 
 		// Tags
 		if len(r.TagDiffs) > 0 || len(r.ExtraTags) > 0 {
-			fmt.Println(color.CyanString("  🏷️ Tags:"))
+			fmt.Println(color.CyanString("  🏷️  Tags:"))
 			var mismatches []string
 			var missing []string
 			for key, diff := range r.TagDiffs {
@@ -75,14 +75,14 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 				printedDrift = true
 			}
 			if len(missing) > 0 {
-				fmt.Println(color.YellowString("    ⚠️ Missing:"))
+				fmt.Println(color.YellowString("    ⚠️  Missing:"))
 				for _, m := range missing {
 					fmt.Printf("        • %s\n", color.YellowString(m))
 				}
 				printedDrift = true
 			}
 			if len(r.ExtraTags) > 0 {
-				fmt.Println(color.YellowString("    ➕  Extra:"))
+				fmt.Println(color.YellowString("    ➕ Extra:"))
 				for key, val := range r.ExtraTags {
 					fmt.Printf("        • %s\n", color.YellowString(fmt.Sprintf("%s:%s", key, val)))
 				}
@@ -148,7 +148,7 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 			if liveLogPrefix != planLogPrefix && liveLogPrefix != "" {
 				liveFields = append(liveFields, fmt.Sprintf("prefix=%s", liveLogPrefix))
 			}
-			fmt.Println(color.CyanString("  📑 Logging:"))
+			fmt.Println(color.CyanString("  📝 Logging:"))
 			fmt.Printf("    • plan → %s\n", color.YellowString(strings.Join(planFields, ", ")))
 			fmt.Printf("    • live → %s\n", color.RedString(strings.Join(liveFields, ", ")))
 			printedDrift = true
@@ -231,7 +231,7 @@ func (p S3DriftResultPrinter) PrintDrift(results interface{}, plan, live interfa
 				}
 			}
 			if len(deleted) > 0 {
-				fmt.Println(color.YellowString("    ⚠️ Deleted rules:"))
+				fmt.Println(color.YellowString("    ⚠️  Deleted rules:"))
 				for _, id := range deleted {
 					pr := planLCMap[id]
 					fmt.Printf("        – %s:\n", id)

@@ -1,4 +1,5 @@
 <p align="center">
+  <img src="assets/cloudrift-logo.png" alt="Cloudrift Logo" width="120">
   <h1 align="center">Cloudrift</h1>
   <p align="center">
     <strong>Pre-apply infrastructure governance for Terraform</strong>
@@ -26,27 +27,29 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                  CLOUDRIFT UNIQUE POSITION                   │
-│                                                              │
-│   Terraform Plan  ──┐                                        │
-│                     ├──▶  Policy Engine  ──▶  ALLOW/BLOCK   │
-│   Live AWS State  ──┘        (OPA)                           │
-│                                                              │
-│   Competitors check EITHER plan OR live state                │
+│                  CLOUDRIFT UNIQUE POSITION                  │
+│                                                             │
+│   Terraform Plan  ──┐                                       │
+│                     ├──▶  Policy Engine  ──▶  ALLOW/BLOCK  │
+│   Live AWS State  ──┘        (OPA)                          │
+│                                                             │
+│   Competitors check EITHER plan OR live state               │
 │   Cloudrift checks BOTH — catches drift AND policy violations│
 └─────────────────────────────────────────────────────────────┘
 ```
 
-![Demo](assets/s3_scanning.gif)
-
 ## Table of Contents
 
 - [Why Cloudrift?](#why-cloudrift)
+- [Features](#features)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [Usage](#usage)
 - [Output Formats](#output-formats)
+- [Policy Engine](#policy-engine)
+- [CI/CD Integration](#cicd-integration)
 - [Configuration](#configuration)
-- [How It Works](#how-it-works)
+- [Project Structure](#project-structure)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
 - [License](#license)
@@ -57,12 +60,21 @@
 |---------|-----------|-----------------|---------|----------|
 | **Pre-apply validation** | ✅ | ❌ | ✅ | ❌ |
 | **Live state comparison** | ✅ | ❌ | ❌ | ✅ |
-| **Policy engine (OPA)** | 🚧 Coming | Sentinel | ✅ | ❌ |
+| **Policy engine (OPA)** | ✅ | Sentinel ($$$) | ✅ | ❌ |
 | **SARIF output** | ✅ | ❌ | ✅ | ❌ |
 | **Open source** | ✅ | ❌ | ✅ | ✅ |
 | **Self-hosted** | ✅ | ❌ | ✅ | ✅ |
 
 **Key differentiator:** Cloudrift compares your Terraform plan against **live AWS state** — catching drift that would be silently overwritten by `terraform apply`.
+
+## Features
+
+- **Drift Detection** — Compare Terraform plans against live AWS infrastructure
+- **Policy Engine** — 7 built-in OPA security policies + custom policy support
+- **Multiple Output Formats** — Console, JSON, SARIF for CI/CD integration
+- **Multi-Service Support** — S3 buckets and EC2 instances
+- **CI/CD Ready** — GitHub Actions, GitLab CI, Jenkins integration
+- **GitHub Security Integration** — SARIF output for Security tab
 
 ## Installation
 
@@ -78,10 +90,12 @@ go install github.com/inayathulla/cloudrift@latest
 docker pull inayathulla/cloudrift
 ```
 
-### Via Homebrew (coming soon)
+### Build from Source
 
 ```bash
-brew install cloudrift
+git clone https://github.com/inayathulla/cloudrift.git
+cd cloudrift
+go build -o cloudrift .
 ```
 
 ## Quick Start
@@ -108,31 +122,69 @@ plan_path: ./plan.json
 ### 3. Run Cloudrift
 
 ```bash
-# Console output (default)
+# Scan S3 buckets
 cloudrift scan --service=s3
 
-# JSON output for CI/CD
+# Scan EC2 instances
+cloudrift scan --service=ec2
+
+# Output as JSON
 cloudrift scan --service=s3 --format=json
 
-# SARIF output for GitHub Security tab
-cloudrift scan --service=s3 --format=sarif --output=drift-report.sarif
+# Fail CI/CD on policy violations
+cloudrift scan --service=s3 --fail-on-violation
 ```
+
+## Usage
+
+```bash
+cloudrift scan [flags]
+```
+
+### Flags
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--config` | `-c` | `cloudrift.yml` | Path to configuration file |
+| `--service` | `-s` | `s3` | AWS service to scan (s3, ec2) |
+| `--format` | `-f` | `console` | Output format (console, json, sarif) |
+| `--output` | `-o` | stdout | Write output to file |
+| `--policy-dir` | `-p` | - | Directory with custom OPA policies |
+| `--fail-on-violation` | - | `false` | Exit non-zero on violations |
+| `--skip-policies` | - | `false` | Skip policy evaluation |
+| `--no-emoji` | - | `false` | Use ASCII instead of emojis |
+
+### Supported Resources
+
+| Resource | Service | Attributes Checked |
+|----------|---------|-------------------|
+| S3 Buckets | `--service=s3` | ACL, tags, versioning, encryption, logging, public access block, lifecycle rules |
+| EC2 Instances | `--service=ec2` | Instance type, AMI, subnet, security groups, tags, EBS optimization, monitoring |
+
+For detailed usage instructions, see [docs/USAGE.md](docs/USAGE.md).
 
 ## Output Formats
 
-Cloudrift supports multiple output formats for different use cases:
-
 ### Console (default)
-
-Colorized, human-readable output for terminal use:
 
 ```bash
 cloudrift scan --service=s3
 ```
 
-### JSON
+```
+🚀 Starting Cloudrift scan...
+🔐 Connected as: arn:aws:iam::123456789012:root [us-east-1]
+✔️  Evaluated 7 policies in 23ms
+⚠️  Found 2 policy violations
 
-Machine-readable format for CI/CD pipelines and scripting:
+⚠️  Drift detected!
+🪣 my-bucket
+  🔐 Encryption mismatch:
+    • expected → "AES256"
+    • actual   → ""
+```
+
+### JSON
 
 ```bash
 cloudrift scan --service=s3 --format=json
@@ -142,107 +194,61 @@ cloudrift scan --service=s3 --format=json
 {
   "service": "S3",
   "account_id": "123456789012",
-  "total_resources": 5,
-  "drift_count": 2,
+  "drift_count": 1,
   "drifts": [
     {
       "resource_name": "my-bucket",
-      "resource_type": "aws_s3_bucket",
       "diffs": {
-        "versioning_enabled": ["true", "false"]
+        "encryption_algorithm": ["AES256", ""]
       }
     }
   ]
 }
 ```
 
-### SARIF
-
-[Static Analysis Results Interchange Format](https://sarifweb.azurewebsites.net/) for GitHub/GitLab Security integration:
+### SARIF (GitHub Security)
 
 ```bash
-cloudrift scan --service=s3 --format=sarif --output=drift-report.sarif
+cloudrift scan --service=s3 --format=sarif --output=results.sarif
 ```
 
-Upload to GitHub Code Scanning:
+Upload to GitHub Code Scanning for Security tab integration.
 
-```yaml
-# .github/workflows/drift-scan.yml
-- name: Run Cloudrift
-  run: cloudrift scan --service=s3 --format=sarif --output=results.sarif
+## Policy Engine
 
-- name: Upload SARIF
-  uses: github/codeql-action/upload-sarif@v2
-  with:
-    sarif_file: results.sarif
+Cloudrift includes 7 built-in OPA security policies:
+
+| Policy | Severity | Description |
+|--------|----------|-------------|
+| S3-001 | high | S3 buckets must have encryption enabled |
+| S3-003 to S3-006 | high | S3 public access block settings |
+| S3-007, S3-008 | critical | No public ACLs allowed |
+| TAG-001 | medium | Environment tag required |
+| TAG-002 to TAG-004 | low | Owner, Project, Name tags recommended |
+
+### Custom Policies
+
+Create custom OPA policies:
+
+```rego
+# my-policies/custom.rego
+package cloudrift.custom
+
+deny[result] {
+    input.resource.type == "aws_s3_bucket"
+    not input.resource.planned.tags.CostCenter
+
+    result := {
+        "policy_id": "CUSTOM-001",
+        "msg": "S3 bucket must have CostCenter tag",
+        "severity": "medium"
+    }
+}
 ```
 
-## Configuration
-
-| Field | Description | Required |
-|-------|-------------|----------|
-| `aws_profile` | AWS credentials profile name | Yes |
-| `region` | AWS region to scan | Yes |
-| `plan_path` | Path to Terraform plan JSON | Yes |
-
-## How It Works
-
+```bash
+cloudrift scan --service=s3 --policy-dir=./my-policies
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Terraform Plan │────▶│    Cloudrift    │◀────│   AWS Live API  │
-│     (JSON)      │     │     Engine      │     │   (S3, EC2...)  │
-└─────────────────┘     └────────┬────────┘     └─────────────────┘
-                                 │
-                                 ▼
-                        ┌─────────────────┐
-                        │  Drift Report   │
-                        │ JSON/SARIF/CLI  │
-                        └─────────────────┘
-```
-
-1. **Parse** — Extracts planned resource configurations from Terraform plan JSON
-2. **Fetch** — Queries AWS APIs in parallel to get current live state
-3. **Compare** — Detects attribute-level differences between plan and reality
-4. **Report** — Outputs results in your preferred format
-
-### Supported Resources
-
-| Resource | Status |
-|----------|--------|
-| S3 Buckets | ✅ Available |
-| EC2 Instances | 🚧 Coming |
-| IAM Roles | 🚧 Planned |
-| Security Groups | 🚧 Planned |
-| RDS Instances | 🚧 Planned |
-
-## Roadmap
-
-Cloudrift is evolving into a full infrastructure governance platform:
-
-### Phase 1: Multi-Service Foundation ✅
-- [x] Generic detector interface
-- [x] JSON output format
-- [x] SARIF output format
-- [ ] EC2 drift detection
-- [ ] IAM drift detection
-
-### Phase 2: Policy Engine
-- [ ] OPA (Open Policy Agent) integration
-- [ ] Built-in security policies
-- [ ] Custom policy support
-- [ ] `--fail-on-violation` flag
-
-### Phase 3: Compliance Packs
-- [ ] CIS AWS Foundations
-- [ ] SOC 2 Type II
-- [ ] HIPAA
-- [ ] PCI-DSS
-
-### Phase 4: Enterprise Features
-- [ ] Multi-account scanning
-- [ ] Web dashboard
-- [ ] Scheduled scans
-- [ ] Slack/PagerDuty alerts
 
 ## CI/CD Integration
 
@@ -271,13 +277,14 @@ jobs:
         run: go install github.com/inayathulla/cloudrift@latest
 
       - name: Run Drift Scan
-        run: cloudrift scan --service=s3 --format=sarif --output=results.sarif
+        run: cloudrift scan --service=s3 --format=sarif --output=results.sarif --fail-on-violation
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Upload SARIF
         uses: github/codeql-action/upload-sarif@v2
+        if: always()
         with:
           sarif_file: results.sarif
 ```
@@ -289,36 +296,101 @@ drift-scan:
   image: golang:1.21
   script:
     - go install github.com/inayathulla/cloudrift@latest
-    - cloudrift scan --service=s3 --format=json
-  artifacts:
-    reports:
-      sast: drift-report.json
+    - terraform init && terraform plan -out=tfplan.binary
+    - terraform show -json tfplan.binary > plan.json
+    - cloudrift scan --service=s3 --format=json --fail-on-violation
+```
+
+## Configuration
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| `aws_profile` | AWS credentials profile name | Yes |
+| `region` | AWS region to scan | Yes |
+| `plan_path` | Path to Terraform plan JSON | Yes |
+
+### Example Configurations
+
+**S3 Scanning:**
+```yaml
+# config/cloudrift.yml
+aws_profile: default
+region: us-east-1
+plan_path: ./examples/plan.json
+```
+
+**EC2 Scanning:**
+```yaml
+# config/cloudrift-ec2.yml
+aws_profile: default
+region: us-east-1
+plan_path: ./examples/ec2-plan.json
 ```
 
 ## Project Structure
 
 ```
 cloudrift/
-├── cmd/                    # CLI commands
+├── cmd/                          # CLI commands
+│   ├── root.go
+│   └── scan.go
 ├── internal/
-│   ├── aws/                # AWS API integrations
-│   ├── detector/           # Drift detection logic
-│   │   ├── interface.go    # Generic detector interface
-│   │   ├── registry.go     # Service registry
-│   │   └── s3.go           # S3 detector
-│   ├── output/             # Output formatters
-│   │   ├── json.go         # JSON formatter
-│   │   ├── sarif.go        # SARIF formatter
-│   │   └── console.go      # Console formatter
-│   ├── models/             # Data structures
-│   └── parser/             # Terraform plan parser
-├── policies/               # OPA policies (coming soon)
-└── tests/                  # Unit tests
+│   ├── aws/                      # AWS API integrations
+│   │   ├── config.go             # AWS SDK configuration
+│   │   ├── s3.go                 # S3 API client
+│   │   └── ec2.go                # EC2 API client
+│   ├── detector/                 # Drift detection logic
+│   │   ├── interface.go          # Detector interface
+│   │   ├── s3.go                 # S3 drift detector
+│   │   ├── ec2.go                # EC2 drift detector
+│   │   ├── s3_printer.go         # S3 console output
+│   │   └── ec2_printer.go        # EC2 console output
+│   ├── output/                   # Output formatters
+│   │   ├── json.go               # JSON formatter
+│   │   ├── sarif.go              # SARIF formatter
+│   │   └── console.go            # Console formatter
+│   ├── policy/                   # OPA policy engine
+│   │   ├── engine.go             # Policy evaluation
+│   │   ├── loader.go             # Policy loading
+│   │   └── policies/             # Built-in policies
+│   │       ├── security/
+│   │       ├── tagging/
+│   │       └── cost/
+│   ├── models/                   # Data structures
+│   └── parser/                   # Terraform plan parser
+├── config/                       # Example configurations
+├── examples/                     # Example Terraform plans
+├── docs/                         # Documentation
+│   └── USAGE.md                  # Detailed usage guide
+└── tests/                        # Unit tests
 ```
+
+## Roadmap
+
+### Completed ✅
+- [x] S3 drift detection
+- [x] EC2 drift detection
+- [x] JSON output format
+- [x] SARIF output format
+- [x] OPA policy engine
+- [x] Built-in security policies
+- [x] Custom policy support
+- [x] `--fail-on-violation` flag
+
+### In Progress 🚧
+- [ ] IAM drift detection
+- [ ] Security Groups detection
+- [ ] RDS drift detection
+
+### Planned 📋
+- [ ] Compliance packs (CIS, SOC2, HIPAA)
+- [ ] Multi-account scanning
+- [ ] Web dashboard
+- [ ] Slack/PagerDuty alerts
 
 ## Contributing
 
-Contributions are welcome! See our contributing guidelines.
+Contributions are welcome!
 
 ```bash
 # Clone
@@ -326,13 +398,13 @@ git clone https://github.com/inayathulla/cloudrift.git
 cd cloudrift
 
 # Build
-go build -o cloudrift main.go
+go build -o cloudrift .
 
 # Test
 go test ./...
 
-# Format
-go fmt ./...
+# Run
+./cloudrift scan --service=s3 --config=config/cloudrift.yml
 ```
 
 ## Connect

@@ -1,0 +1,65 @@
+{
+  "resource_changes": [
+    {
+      "address": "aws_instance.web_server",
+      "type": "aws_instance",
+      "name": "web_server",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "ami": "ami-0c55b159cbfafe1f0",
+          "instance_type": "t3.micro",
+          "subnet_id": "subnet-12345678",
+          "availability_zone": "us-east-1a",
+          "key_name": "my-key-pair",
+          "monitoring": true,
+          "ebs_optimized": true,
+          "iam_instance_profile": "web-server-role",
+          "vpc_security_group_ids": ["sg-12345678"],
+          "tags": {
+            "Name": "web-server-prod",
+            "Environment": "production",
+            "Owner": "platform-team"
+          },
+          "root_block_device": [
+            {
+              "volume_type": "gp3",
+              "volume_size": 50,
+              "encrypted": true,
+              "delete_on_termination": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "address": "aws_instance.database",
+      "type": "aws_instance",
+      "name": "database",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "ami": "ami-0c55b159cbfafe1f0",
+          "instance_type": "r5.large",
+          "subnet_id": "subnet-87654321",
+          "availability_zone": "us-east-1b",
+          "key_name": "db-key",
+          "monitoring": false,
+          "ebs_optimized": true,
+          "vpc_security_group_ids": ["sg-87654321"],
+          "tags": {
+            "Name": "database-prod"
+          },
+          "root_block_device": [
+            {
+              "volume_type": "gp3",
+              "volume_size": 200,
+              "encrypted": false,
+              "delete_on_termination": false
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

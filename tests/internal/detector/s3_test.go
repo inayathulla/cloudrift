@@ -91,19 +91,34 @@ func TestDetectS3Drift_Logging_Negative(t *testing.T) {
 // PublicAccessBlock positive and negative
 func TestDetectS3Drift_PublicAccessBlock_Positive(t *testing.T) {
 	plan := models.S3Bucket{
-		Name:              "b-pab",
-		PublicAccessBlock: models.PublicAccessBlockConfig{false, false, false, false},
+		Name: "b-pab",
+		PublicAccessBlock: models.PublicAccessBlockConfig{
+			BlockPublicAcls:       false,
+			IgnorePublicAcls:      false,
+			BlockPublicPolicy:     false,
+			RestrictPublicBuckets: false,
+		},
 	}
 	actual := &models.S3Bucket{
-		Name:              "b-pab",
-		PublicAccessBlock: models.PublicAccessBlockConfig{true, false, false, false},
+		Name: "b-pab",
+		PublicAccessBlock: models.PublicAccessBlockConfig{
+			BlockPublicAcls:       true,
+			IgnorePublicAcls:      false,
+			BlockPublicPolicy:     false,
+			RestrictPublicBuckets: false,
+		},
 	}
 	res := detector.DetectS3Drift(plan, actual)
 	assert.True(t, res.PublicAccessBlockDiff)
 }
 
 func TestDetectS3Drift_PublicAccessBlock_Negative(t *testing.T) {
-	cfg := models.PublicAccessBlockConfig{true, true, true, true}
+	cfg := models.PublicAccessBlockConfig{
+		BlockPublicAcls:       true,
+		IgnorePublicAcls:      true,
+		BlockPublicPolicy:     true,
+		RestrictPublicBuckets: true,
+	}
 	plan := models.S3Bucket{Name: "b-pab", PublicAccessBlock: cfg}
 	actual := &models.S3Bucket{Name: "b-pab", PublicAccessBlock: cfg}
 	res := detector.DetectS3Drift(plan, actual)
