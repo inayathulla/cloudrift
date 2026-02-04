@@ -59,8 +59,13 @@ func GetCallerIdentity(cfg sdkaws.Config) (*sts.GetCallerIdentityOutput, error) 
 	return aws.GetCallerIdentity(cfg)
 }
 
-// LoadPlan reads and parses a Terraform plan JSON file.
+// LoadPlan reads and parses a Terraform plan JSON file for S3 buckets.
 // This is a convenience wrapper around parser.LoadPlan.
 func LoadPlan(planPath string) ([]models.S3Bucket, error) {
 	return parser.LoadPlan(planPath)
+}
+
+// LoadEC2Plan reads and parses a Terraform plan JSON file for EC2 instances.
+func LoadEC2Plan(planPath string) ([]models.EC2Instance, error) {
+	return parser.LoadEC2Plan(planPath)
 }

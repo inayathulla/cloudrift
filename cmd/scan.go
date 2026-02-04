@@ -13,7 +13,6 @@ import (
 
 	"github.com/inayathulla/cloudrift/internal/common"
 	"github.com/inayathulla/cloudrift/internal/detector"
-	"github.com/inayathulla/cloudrift/internal/models"
 	"github.com/inayathulla/cloudrift/internal/output"
 )
 
@@ -57,13 +56,13 @@ of corresponding resources from AWS, then reports any differences found.
 
 Flags:
   --config, -c    Path to cloudrift.yml configuration file
-  --service, -s   AWS service to scan (currently supports: s3)
+  --service, -s   AWS service to scan (supports: s3, ec2)
   --format, -f    Output format: console, json, sarif (default: console)
   --output, -o    Write output to file instead of stdout
 
 Example:
   cloudrift scan --config=config/cloudrift.yml --service=s3
-  cloudrift scan --service=s3 --format=json
+  cloudrift scan --service=ec2 --format=json
   cloudrift scan --service=s3 --format=sarif --output=drift-report.sarif`,
 	Run: func(cmd *cobra.Command, args []string) {
 		startScan := time.Now()
@@ -123,33 +122,55 @@ Example:
 		}
 		color.Green("🔐 Connected as: %s (%s) [%s] in %s", *identity.Arn, *identity.Account, region, time.Since(start).Round(time.Millisecond))
 
-		// 4. Loading Terraform plan
-		s.Suffix = " Loading Terraform plan..."
-		start = time.Now()
-		s.Start()
-		planResources, err := common.LoadPlan(planPath)
-		s.Stop()
-		if err != nil {
-			color.Red("❌ Failed to load plan: %v", err)
-			os.Exit(1)
-		}
-		color.Yellow("📄 Plan loaded from json in %s", time.Since(start).Round(time.Millisecond))
-
-		// 5. Select the appropriate detector and printer
+		// 4. Select the appropriate detector and printer, load plan
 		var det DriftDetector
 		var printer detector.DriftResultPrinter
 		var serviceName string
+		var planResources interface{}
+		var liveResources interface{}
+		var planCount int
+
+		s.Suffix = " Loading Terraform plan..."
+		start = time.Now()
+		s.Start()
+
 		switch service {
 		case "s3":
 			det = detector.NewS3DriftDetector(cfg)
 			printer = detector.S3DriftResultPrinter{}
 			serviceName = "S3"
+			pr, err := common.LoadPlan(planPath)
+			if err != nil {
+				s.Stop()
+				color.Red("❌ Failed to load plan: %v", err)
+				os.Exit(1)
+			}
+			planResources = pr
+			planCount = len(pr)
+
+		case "ec2":
+			det = detector.NewEC2DriftDetector(cfg)
+			printer = detector.EC2DriftResultPrinter{}
+			serviceName = "EC2"
+			pr, err := common.LoadEC2Plan(planPath)
+			if err != nil {
+				s.Stop()
+				color.Red("❌ Failed to load plan: %v", err)
+				os.Exit(1)
+			}
+			planResources = pr
+			planCount = len(pr)
+
 		default:
-			color.Red("❌ Unsupported service: %s", service)
+			s.Stop()
+			color.Red("❌ Unsupported service: %s (supported: s3, ec2)", service)
 			os.Exit(1)
 		}
 
-		// 6. Fetching live state
+		s.Stop()
+		color.Yellow("📄 Plan loaded from json in %s", time.Since(start).Round(time.Millisecond))
+
+		// 5. Fetching live state
 		s.Suffix = fmt.Sprintf(" Fetching live %s state...", serviceName)
 		start = time.Now()
 		s.Start()
@@ -159,16 +180,10 @@ Example:
 			color.Red("❌ Failed to fetch live state: %v", err)
 			os.Exit(1)
 		}
+		liveResources = rawLive
 		color.Yellow("✔️  Live %s state fetched in %s", serviceName, time.Since(start).Round(time.Millisecond))
 
-		// 7. Cast to concrete type so we can inspect
-		liveResources, ok := rawLive.([]models.S3Bucket)
-		if !ok {
-			color.Red("❌ Unexpected live state type")
-			os.Exit(1)
-		}
-
-		// 8. Detect drift
+		// 6. Detect drift
 		results, err := det.DetectDrift(planResources, liveResources)
 		if err != nil {
 			color.Red("❌ Drift detection failed: %v", err)
@@ -187,7 +202,7 @@ Example:
 		}
 
 		// Convert results to output.ScanResult
-		scanResult := convertToScanResult(results, serviceName, *identity.Account, region, len(planResources), scanDuration)
+		scanResult := convertToScanResult(results, serviceName, *identity.Account, region, planCount, scanDuration)
 
 		// Determine output writer
 		var writer *os.File = os.Stdout
