@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -13,12 +14,15 @@ import (
 	"github.com/inayathulla/cloudrift/internal/common"
 	"github.com/inayathulla/cloudrift/internal/detector"
 	"github.com/inayathulla/cloudrift/internal/models"
+	"github.com/inayathulla/cloudrift/internal/output"
 )
 
 // Command-line flags for the scan command.
 var (
-	configPath string // Path to cloudrift.yml configuration file
-	service    string // AWS service to scan (e.g., "s3", "ec2")
+	configPath   string // Path to cloudrift.yml configuration file
+	service      string // AWS service to scan (e.g., "s3", "ec2")
+	outputFormat string // Output format (console, json, sarif)
+	outputFile   string // Output file path (optional)
 )
 
 // DriftDetector defines the interface for service-specific drift detectors.
@@ -54,9 +58,13 @@ of corresponding resources from AWS, then reports any differences found.
 Flags:
   --config, -c    Path to cloudrift.yml configuration file
   --service, -s   AWS service to scan (currently supports: s3)
+  --format, -f    Output format: console, json, sarif (default: console)
+  --output, -o    Write output to file instead of stdout
 
 Example:
-  cloudrift scan --config=config/cloudrift.yml --service=s3`,
+  cloudrift scan --config=config/cloudrift.yml --service=s3
+  cloudrift scan --service=s3 --format=json
+  cloudrift scan --service=s3 --format=sarif --output=drift-report.sarif`,
 	Run: func(cmd *cobra.Command, args []string) {
 		startScan := time.Now()
 		color.Cyan("🚀 Starting Cloudrift scan...")
@@ -166,16 +174,118 @@ Example:
 			color.Red("❌ Drift detection failed: %v", err)
 			os.Exit(1)
 		}
-		color.Green("✔️  Scan completed in %s!", time.Since(startScan).Round(time.Millisecond))
+		scanDuration := time.Since(startScan)
+		color.Green("✔️  Scan completed in %s!", scanDuration.Round(time.Millisecond))
 		fmt.Println()
 
-		// 9. Print drift results (all at once)
-		printer.PrintDrift(results, planResources, liveResources)
+		// 9. Format and output results
+		formatType := output.FormatType(strings.ToLower(outputFormat))
+		formatter, ok := output.Get(formatType)
+		if !ok {
+			color.Red("❌ Unsupported output format: %s (supported: console, json, sarif)", outputFormat)
+			os.Exit(1)
+		}
+
+		// Convert results to output.ScanResult
+		scanResult := convertToScanResult(results, serviceName, *identity.Account, region, len(planResources), scanDuration)
+
+		// Determine output writer
+		var writer *os.File = os.Stdout
+		if outputFile != "" {
+			writer, err = os.Create(outputFile)
+			if err != nil {
+				color.Red("❌ Failed to create output file: %v", err)
+				os.Exit(1)
+			}
+			defer writer.Close()
+		}
+
+		// For non-console formats, suppress the colorized output
+		if formatType != output.FormatConsole {
+			if err := formatter.Format(writer, scanResult); err != nil {
+				color.Red("❌ Failed to format output: %v", err)
+				os.Exit(1)
+			}
+			if outputFile != "" {
+				color.Green("📄 Output written to %s", outputFile)
+			}
+		} else {
+			// Use the legacy printer for console output (for now)
+			printer.PrintDrift(results, planResources, liveResources)
+		}
 	},
+}
+
+// convertToScanResult converts legacy DriftResult to the new output.ScanResult format.
+func convertToScanResult(results []detector.DriftResult, service, accountID, region string, totalResources int, duration time.Duration) output.ScanResult {
+	drifts := make([]detector.DriftInfo, 0, len(results))
+
+	for _, r := range results {
+		info := detector.DriftInfo{
+			ResourceID:   r.BucketName,
+			ResourceType: "aws_s3_bucket",
+			ResourceName: r.BucketName,
+			Missing:      r.Missing,
+			Diffs:        make(map[string][2]interface{}),
+			ExtraAttributes: make(map[string]interface{}),
+			Severity:     "warning",
+		}
+
+		if r.AclDiff {
+			info.Diffs["acl"] = [2]interface{}{"<planned>", "<actual>"}
+		}
+		if r.VersioningDiff {
+			info.Diffs["versioning_enabled"] = [2]interface{}{"<planned>", "<actual>"}
+		}
+		if r.EncryptionDiff {
+			info.Diffs["encryption_algorithm"] = [2]interface{}{"<planned>", "<actual>"}
+		}
+		if r.LoggingDiff {
+			info.Diffs["logging"] = [2]interface{}{"<planned>", "<actual>"}
+		}
+		if r.PublicAccessBlockDiff {
+			info.Diffs["public_access_block"] = [2]interface{}{"<planned>", "<actual>"}
+		}
+		if r.LifecycleDiff {
+			info.Diffs["lifecycle_rules"] = [2]interface{}{"<planned>", "<actual>"}
+		}
+		for k, v := range r.TagDiffs {
+			info.Diffs["tags."+k] = [2]interface{}{v[0], v[1]}
+		}
+		for k, v := range r.ExtraTags {
+			info.ExtraAttributes["tags."+k] = v
+		}
+
+		if r.Missing {
+			info.Severity = "critical"
+		}
+
+		drifts = append(drifts, info)
+	}
+
+	driftCount := 0
+	for _, d := range drifts {
+		if d.HasDrift() {
+			driftCount++
+		}
+	}
+
+	return output.ScanResult{
+		Service:        service,
+		AccountID:      accountID,
+		Region:         region,
+		TotalResources: totalResources,
+		DriftCount:     driftCount,
+		Drifts:         drifts,
+		ScanDuration:   duration.Milliseconds(),
+		Timestamp:      time.Now().UTC().Format(time.RFC3339),
+	}
 }
 
 func init() {
 	scanCmd.Flags().StringVarP(&configPath, "config", "c", "cloudrift.yml", "Path to Cloudrift config file")
 	scanCmd.Flags().StringVarP(&service, "service", "s", "s3", "AWS service to scan (e.g., s3)")
+	scanCmd.Flags().StringVarP(&outputFormat, "format", "f", "console", "Output format: console, json, sarif")
+	scanCmd.Flags().StringVarP(&outputFile, "output", "o", "", "Write output to file instead of stdout")
 	rootCmd.AddCommand(scanCmd)
 }
