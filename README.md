@@ -48,10 +48,12 @@
 - [Output Formats](#output-formats)
 - [Policy Engine](#policy-engine)
 - [CI/CD Integration](#cicd-integration)
+- [Desktop Dashboard](#desktop-dashboard)
 - [Configuration](#configuration)
 - [Project Structure](#project-structure)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
+- [Related Projects](#related-projects)
 - [License](#license)
 
 ## Why Cloudrift?
@@ -301,6 +303,21 @@ drift-scan:
     - cloudrift scan --service=s3 --format=json --fail-on-violation
 ```
 
+## Desktop Dashboard
+
+**[Cloudrift UI](https://github.com/inayathulla/cloudrift-ui)** is a native desktop application (Flutter) that provides a visual security dashboard for Cloudrift. It invokes the CLI, parses JSON output, and displays results with real-time charts, drift diff viewers, and compliance scoring.
+
+```bash
+# Clone and run
+git clone https://github.com/inayathulla/cloudrift-ui.git
+cd cloudrift-ui
+flutter pub get && flutter run -d macos
+```
+
+Features include: KPI dashboard, three-column drift diff viewer, policy browser with remediation, animated compliance ring, scan history with trend charts, and a dark cybersecurity theme.
+
+See the [Cloudrift UI README](https://github.com/inayathulla/cloudrift-ui) for full documentation.
+
 ## Configuration
 
 | Field | Description | Required |
@@ -376,6 +393,7 @@ cloudrift/
 - [x] Built-in security policies
 - [x] Custom policy support
 - [x] `--fail-on-violation` flag
+- [x] Desktop dashboard ([Cloudrift UI](https://github.com/inayathulla/cloudrift-ui))
 
 ### In Progress 🚧
 - [ ] IAM drift detection
@@ -385,7 +403,6 @@ cloudrift/
 ### Planned 📋
 - [ ] Compliance packs (CIS, SOC2, HIPAA)
 - [ ] Multi-account scanning
-- [ ] Web dashboard
 - [ ] Slack/PagerDuty alerts
 
 ## Contributing
@@ -406,6 +423,12 @@ go test ./...
 # Run
 ./cloudrift scan --service=s3 --config=config/cloudrift.yml
 ```
+
+## Related Projects
+
+| Project | Description |
+|---------|-------------|
+| **[Cloudrift UI](https://github.com/inayathulla/cloudrift-ui)** | Native desktop security dashboard (Flutter) that visualizes Cloudrift scan results with drift diff viewers, policy browsers, compliance scoring, and trend charts. |
 
 ## Connect
 
