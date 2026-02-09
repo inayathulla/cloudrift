@@ -305,18 +305,41 @@ drift-scan:
 
 ## Desktop Dashboard
 
-**[Cloudrift UI](https://github.com/inayathulla/cloudrift-ui)** is a native desktop application (Flutter) that provides a visual security dashboard for Cloudrift. It invokes the CLI, parses JSON output, and displays results with real-time charts, drift diff viewers, and compliance scoring.
+**[Cloudrift UI](https://github.com/inayathulla/cloudrift-ui)** is a cross-platform dashboard that visualizes Cloudrift scan results. It runs **two ways**:
+
+- **Web via Docker** — One command deploys a container with Flutter web app, Go API server, nginx, and Terraform. Zero dependencies.
+- **Native Desktop** — Runs on macOS, Linux, or Windows, calling the CLI binary directly. No server needed.
+
+### Quick Start (Docker)
 
 ```bash
-# Clone and run
-git clone https://github.com/inayathulla/cloudrift-ui.git
-cd cloudrift-ui
-flutter pub get && flutter run -d macos
+docker build -t cloudrift-ui .
+docker run -d -p 8080:80 -v ~/.aws:/root/.aws:ro --name cloudrift-ui cloudrift-ui:latest
+open http://localhost:8080
 ```
 
-Features include: KPI dashboard, three-column drift diff viewer, policy browser with remediation, animated compliance ring, scan history with trend charts, and a dark cybersecurity theme.
+### Quick Start (Desktop)
 
-See the [Cloudrift UI README](https://github.com/inayathulla/cloudrift-ui) for full documentation.
+```bash
+git clone https://github.com/inayathulla/cloudrift-ui.git
+cd cloudrift-ui
+flutter pub get && flutter run -d macos   # or -d linux / -d windows
+```
+
+### Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **Interactive Dashboard** | Clickable KPI cards, drift trend charts, severity donut, framework compliance rings |
+| **Drift Visualization** | Three-column diff viewer: Attribute / Expected (Terraform) / Actual (AWS) |
+| **Resource Builder** | Three modes: Terraform (auto-generate plan.json), Manual (S3/EC2 forms), Upload (drag & drop) |
+| **Policy Dashboard** | 21 OPA policies with compliance mapping (HIPAA, GDPR, ISO 27001, PCI DSS), severity filters, remediation guidance |
+| **Compliance Scoring** | Animated compliance rings with category breakdowns and trend tracking |
+| **Scan History** | Persistent local history with trend charts and human-readable durations |
+| **Go API Server** | Backend wrapping Cloudrift CLI for web mode — scan, config, health, Terraform plan generation |
+| **Dark Theme** | Cybersecurity-grade dark theme with severity-coded color system |
+
+See the [Cloudrift UI README](https://github.com/inayathulla/cloudrift-ui) for full documentation and screenshots.
 
 ## Configuration
 
@@ -428,7 +451,7 @@ go test ./...
 
 | Project | Description |
 |---------|-------------|
-| **[Cloudrift UI](https://github.com/inayathulla/cloudrift-ui)** | Native desktop security dashboard (Flutter) that visualizes Cloudrift scan results with drift diff viewers, policy browsers, compliance scoring, and trend charts. |
+| **[Cloudrift UI](https://github.com/inayathulla/cloudrift-ui)** | Cross-platform security dashboard (Flutter) — Desktop + Web/Docker. Drift diff viewer, resource builder, 21-policy browser with HIPAA/GDPR/ISO/PCI mapping, compliance scoring, Go API server, and dark cybersecurity theme. |
 
 ## Connect
 
