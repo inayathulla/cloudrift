@@ -1,5 +1,5 @@
 # ---- Build Stage ----
-FROM golang:1.24.4 AS build
+FROM golang:1.24 AS build
 
 ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 WORKDIR /app
