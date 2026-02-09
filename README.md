@@ -88,9 +88,17 @@ go install github.com/inayathulla/cloudrift@latest
 
 ### Via Docker
 
+Pre-built images are available on [Docker Hub](https://hub.docker.com/r/inayathulla/cloudrift):
+
 ```bash
-docker pull inayathulla/cloudrift
+docker pull inayathulla/cloudrift:latest
 ```
+
+| Tag | Description |
+|-----|-------------|
+| `latest` | Latest stable release |
+| `v1.0.0` | Release 1 — S3/EC2 drift detection, OPA policies, SARIF output |
+| `main` | Latest main branch build |
 
 ### Build from Source
 
