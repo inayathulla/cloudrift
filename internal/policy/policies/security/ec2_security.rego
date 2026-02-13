@@ -18,6 +18,8 @@ warn[result] {
 		"msg": sprintf("EC2 instance '%s' should require IMDSv2 (http_tokens = required)", [input.resource.address]),
 		"severity": "medium",
 		"remediation": "Add metadata_options block with http_tokens = 'required' to enforce IMDSv2",
+		"category": "security",
+		"frameworks": ["pci_dss", "iso_27001", "soc2"],
 	}
 }
 
@@ -38,6 +40,8 @@ deny[result] {
 		"msg": sprintf("EC2 instance '%s' must have encrypted root volume", [input.resource.address]),
 		"severity": "high",
 		"remediation": "Set encrypted = true in root_block_device block",
+		"category": "security",
+		"frameworks": ["hipaa", "pci_dss", "iso_27001", "gdpr", "soc2"],
 	}
 }
 
@@ -54,6 +58,8 @@ warn[result] {
 		"msg": sprintf("EC2 instance '%s' will have a public IP assigned. Ensure this is intentional", [input.resource.address]),
 		"severity": "medium",
 		"remediation": "If public access is not needed, set associate_public_ip_address = false",
+		"category": "security",
+		"frameworks": ["pci_dss", "iso_27001", "soc2"],
 	}
 }
 
@@ -78,5 +84,7 @@ warn[result] {
 		"msg": sprintf("EC2 instance '%s' uses very large instance type '%s'. Please review for cost optimization", [input.resource.address, planned.instance_type]),
 		"severity": "medium",
 		"remediation": "Ensure this instance size is necessary. Consider using smaller instances or Spot instances",
+		"category": "cost",
+		"frameworks": [],
 	}
 }

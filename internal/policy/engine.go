@@ -260,6 +260,16 @@ func (e *Engine) parseViolation(item interface{}, pkg string, defaultSeverity Se
 		if meta, ok := msg["metadata"].(map[string]interface{}); ok {
 			v.Metadata = meta
 		}
+		if cat, ok := msg["category"].(string); ok {
+			v.Category = cat
+		}
+		if fws, ok := msg["frameworks"].([]interface{}); ok {
+			for _, fw := range fws {
+				if s, ok := fw.(string); ok {
+					v.Frameworks = append(v.Frameworks, s)
+				}
+			}
+		}
 	default:
 		return nil
 	}

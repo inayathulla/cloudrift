@@ -15,5 +15,7 @@ warn[result] {
 		"msg": sprintf("S3 bucket '%s' does not have versioning enabled. Versioning protects against accidental deletions", [input.resource.address]),
 		"severity": "medium",
 		"remediation": "Enable versioning in aws_s3_bucket_versioning resource",
+		"category": "security",
+		"frameworks": ["iso_27001", "soc2"],
 	}
 }

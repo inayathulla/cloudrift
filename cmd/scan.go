@@ -3,7 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -300,6 +302,42 @@ Example:
 			defer writer.Close()
 		}
 
+		// Attach policy results to scan output for non-console formats
+		if policyResult != nil {
+			po := &output.PolicyOutput{
+				Passed: policyResult.Passed,
+				Failed: policyResult.Failed,
+			}
+			for _, v := range policyResult.Violations {
+				po.Violations = append(po.Violations, output.PolicyViolationOutput{
+					PolicyID:        v.PolicyID,
+					PolicyName:      v.PolicyName,
+					Message:         v.Message,
+					Severity:        string(v.Severity),
+					ResourceType:    v.ResourceType,
+					ResourceAddress: v.ResourceAddress,
+					Remediation:     v.Remediation,
+					Category:        v.Category,
+					Frameworks:      v.Frameworks,
+				})
+			}
+			for _, w := range policyResult.Warnings {
+				po.Warnings = append(po.Warnings, output.PolicyViolationOutput{
+					PolicyID:        w.PolicyID,
+					PolicyName:      w.PolicyName,
+					Message:         w.Message,
+					Severity:        string(w.Severity),
+					ResourceType:    w.ResourceType,
+					ResourceAddress: w.ResourceAddress,
+					Remediation:     w.Remediation,
+					Category:        w.Category,
+					Frameworks:      w.Frameworks,
+				})
+			}
+			po.ComplianceResult = computeCompliance(policyResult)
+			scanResult.PolicyResult = po
+		}
+
 		// For non-console formats, suppress the colorized output
 		if formatType != output.FormatConsole {
 			if err := formatter.Format(writer, scanResult); err != nil {
@@ -324,6 +362,96 @@ Example:
 			os.Exit(2)
 		}
 	},
+}
+
+// policyRegistry is lazily initialized from the embedded .rego files.
+// All policy totals are computed dynamically — never hardcoded.
+var policyRegistry *policy.PolicyRegistry
+
+func getPolicyRegistry() *policy.PolicyRegistry {
+	if policyRegistry == nil {
+		policyRegistry = policy.LoadBuiltinRegistry()
+	}
+	return policyRegistry
+}
+
+// computeCompliance calculates compliance scores from policy evaluation results.
+// Totals are sourced from the dynamic policy registry, not hardcoded.
+func computeCompliance(result *policy.EvaluationResult) *output.ComplianceOutput {
+	reg := getPolicyRegistry()
+
+	// Collect unique failed policy IDs (violations only, not warnings)
+	failedPolicies := make(map[string]policy.Violation)
+	for _, v := range result.Violations {
+		if _, exists := failedPolicies[v.PolicyID]; !exists {
+			failedPolicies[v.PolicyID] = v
+		}
+	}
+
+	failedCount := len(failedPolicies)
+	passingCount := reg.TotalPolicies - failedCount
+
+	// Per-category scoring
+	categoryFailed := make(map[string]int)
+	for _, v := range failedPolicies {
+		if v.Category != "" {
+			categoryFailed[v.Category]++
+		}
+	}
+
+	categories := make(map[string]output.CategoryScore)
+	for cat, total := range reg.CategoryTotals {
+		failed := categoryFailed[cat]
+		passed := total - failed
+		pct := 100.0
+		if total > 0 {
+			pct = math.Round(float64(passed)/float64(total)*10000) / 100
+		}
+		categories[cat] = output.CategoryScore{
+			Percentage: pct,
+			Passed:     passed,
+			Failed:     failed,
+			Total:      total,
+		}
+	}
+
+	// Per-framework scoring
+	frameworkFailed := make(map[string]int)
+	for _, v := range failedPolicies {
+		for _, fw := range v.Frameworks {
+			frameworkFailed[fw]++
+		}
+	}
+
+	frameworks := make(map[string]output.FrameworkScore)
+	for fw, total := range reg.FrameworkTotals {
+		failed := frameworkFailed[fw]
+		passed := total - failed
+		pct := 100.0
+		if total > 0 {
+			pct = math.Round(float64(passed)/float64(total)*10000) / 100
+		}
+		frameworks[fw] = output.FrameworkScore{
+			Percentage: pct,
+			Passed:     passed,
+			Failed:     failed,
+			Total:      total,
+		}
+	}
+
+	overallPct := 100.0
+	if reg.TotalPolicies > 0 {
+		overallPct = math.Round(float64(passingCount)/float64(reg.TotalPolicies)*10000) / 100
+	}
+
+	return &output.ComplianceOutput{
+		OverallPercentage: overallPct,
+		TotalPolicies:     reg.TotalPolicies,
+		PassingPolicies:   passingCount,
+		FailingPolicies:   failedCount,
+		Categories:        categories,
+		Frameworks:        frameworks,
+	}
 }
 
 // printPolicyResults outputs policy evaluation results to console.
@@ -361,6 +489,62 @@ func printPolicyResults(result *policy.EvaluationResult) {
 		}
 	}
 
+	// Print compliance summary
+	compliance := computeCompliance(result)
+	fmt.Println()
+	color.Cyan("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	color.Cyan("            COMPLIANCE SUMMARY                    ")
+	color.Cyan("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println()
+
+	overallColor := color.GreenString
+	if compliance.OverallPercentage < 80 {
+		overallColor = color.RedString
+	} else if compliance.OverallPercentage < 100 {
+		overallColor = color.YellowString
+	}
+	fmt.Printf("  Overall: %s (%d/%d policies passing)\n",
+		overallColor("%.1f%%", compliance.OverallPercentage),
+		compliance.PassingPolicies, compliance.TotalPolicies)
+	fmt.Println()
+
+	// Categories (sorted for deterministic output)
+	fmt.Println("  Categories:")
+	catKeys := make([]string, 0, len(compliance.Categories))
+	for k := range compliance.Categories {
+		catKeys = append(catKeys, k)
+	}
+	sort.Strings(catKeys)
+	for _, cat := range catKeys {
+		score := compliance.Categories[cat]
+		pctStr := fmt.Sprintf("%.1f%%", score.Percentage)
+		if score.Failed > 0 {
+			pctStr = color.RedString(pctStr)
+		} else {
+			pctStr = color.GreenString(pctStr)
+		}
+		fmt.Printf("    %-12s %s (%d/%d)\n", cat, pctStr, score.Passed, score.Total)
+	}
+	fmt.Println()
+
+	// Frameworks (sorted for deterministic output)
+	fmt.Println("  Frameworks:")
+	fwKeys := make([]string, 0, len(compliance.Frameworks))
+	for k := range compliance.Frameworks {
+		fwKeys = append(fwKeys, k)
+	}
+	sort.Strings(fwKeys)
+	for _, fw := range fwKeys {
+		score := compliance.Frameworks[fw]
+		pctStr := fmt.Sprintf("%.1f%%", score.Percentage)
+		if score.Failed > 0 {
+			pctStr = color.RedString(pctStr)
+		} else {
+			pctStr = color.GreenString(pctStr)
+		}
+		fmt.Printf("    %-12s %s (%d/%d)\n", fw, pctStr, score.Passed, score.Total)
+	}
+
 	fmt.Println()
 	color.Cyan("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 }
@@ -371,13 +555,13 @@ func convertToScanResult(results []detector.DriftResult, service, accountID, reg
 
 	for _, r := range results {
 		info := detector.DriftInfo{
-			ResourceID:   r.BucketName,
-			ResourceType: "aws_s3_bucket",
-			ResourceName: r.BucketName,
-			Missing:      r.Missing,
-			Diffs:        make(map[string][2]interface{}),
+			ResourceID:      r.BucketName,
+			ResourceType:    "aws_s3_bucket",
+			ResourceName:    r.BucketName,
+			Missing:         r.Missing,
+			Diffs:           make(map[string][2]interface{}),
 			ExtraAttributes: make(map[string]interface{}),
-			Severity:     "warning",
+			Severity:        "warning",
 		}
 
 		if r.AclDiff {

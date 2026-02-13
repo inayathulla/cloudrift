@@ -18,6 +18,11 @@ taggable_resources := [
 	"aws_eks_cluster",
 	"aws_lb",
 	"aws_vpc",
+	"aws_ebs_volume",
+	"aws_kms_key",
+	"aws_cloudtrail",
+	"aws_cloudwatch_log_group",
+	"aws_secretsmanager_secret",
 ]
 
 # Check for missing Environment tag
@@ -38,6 +43,8 @@ deny[result] {
 		"msg": sprintf("Resource '%s' is missing required 'Environment' tag", [input.resource.address]),
 		"severity": "medium",
 		"remediation": "Add tags = { Environment = \"dev|staging|production\" } to the resource",
+		"category": "tagging",
+		"frameworks": ["soc2"],
 	}
 }
 
@@ -57,6 +64,8 @@ warn[result] {
 		"msg": sprintf("Resource '%s' is missing 'Owner' tag for accountability", [input.resource.address]),
 		"severity": "low",
 		"remediation": "Add Owner tag with team or individual responsible for the resource",
+		"category": "tagging",
+		"frameworks": [],
 	}
 }
 
@@ -76,6 +85,8 @@ warn[result] {
 		"msg": sprintf("Resource '%s' is missing 'Project' tag for cost allocation", [input.resource.address]),
 		"severity": "low",
 		"remediation": "Add Project tag to enable cost allocation and tracking",
+		"category": "tagging",
+		"frameworks": [],
 	}
 }
 
@@ -95,5 +106,7 @@ warn[result] {
 		"msg": sprintf("Resource '%s' is missing 'Name' tag", [input.resource.address]),
 		"severity": "low",
 		"remediation": "Add Name tag for easy identification in AWS console",
+		"category": "tagging",
+		"frameworks": [],
 	}
 }

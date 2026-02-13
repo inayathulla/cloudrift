@@ -23,6 +23,8 @@ warn[result] {
 		"msg": sprintf("EC2 instance '%s' uses very large size '%s'. Monthly cost may exceed $5,000", [input.resource.address, instance_type]),
 		"severity": "medium",
 		"remediation": "Verify this instance size is necessary. Consider auto-scaling instead of single large instances",
+		"category": "cost",
+		"frameworks": [],
 	}
 }
 
@@ -40,6 +42,8 @@ warn[result] {
 		"msg": sprintf("EC2 instance '%s' uses large size '%s'. Review for cost optimization", [input.resource.address, instance_type]),
 		"severity": "low",
 		"remediation": "Consider if this instance size is necessary. Review rightsizing recommendations",
+		"category": "cost",
+		"frameworks": [],
 	}
 }
 
@@ -62,5 +66,7 @@ warn[result] {
 		"msg": sprintf("EC2 instance '%s' uses previous generation '%s'. Newer types offer better price/performance", [input.resource.address, family]),
 		"severity": "low",
 		"remediation": sprintf("Consider upgrading %s to latest generation for better price/performance", [family]),
+		"category": "cost",
+		"frameworks": [],
 	}
 }

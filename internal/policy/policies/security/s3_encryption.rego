@@ -16,6 +16,8 @@ deny[result] {
 		"msg": sprintf("S3 bucket '%s' must have server-side encryption enabled", [input.resource.address]),
 		"severity": "high",
 		"remediation": "Add server_side_encryption_configuration block with sse_algorithm set to 'AES256' or 'aws:kms'",
+		"category": "security",
+		"frameworks": ["hipaa", "pci_dss", "iso_27001", "gdpr", "soc2"],
 	}
 }
 
@@ -33,6 +35,8 @@ deny[result] {
 		"msg": sprintf("S3 bucket '%s' in AWS does not have server-side encryption enabled", [input.resource.address]),
 		"severity": "critical",
 		"remediation": "Enable server-side encryption on the existing S3 bucket in AWS console or via Terraform",
+		"category": "security",
+		"frameworks": ["hipaa", "pci_dss", "iso_27001", "gdpr", "soc2"],
 	}
 }
 
@@ -49,5 +53,7 @@ warn[result] {
 		"msg": sprintf("S3 bucket '%s' uses AES256 encryption. Consider using AWS KMS for better key management", [input.resource.address]),
 		"severity": "low",
 		"remediation": "Change sse_algorithm to 'aws:kms' and specify a KMS key",
+		"category": "security",
+		"frameworks": ["hipaa", "pci_dss", "soc2"],
 	}
 }

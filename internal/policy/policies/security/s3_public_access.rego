@@ -19,6 +19,8 @@ deny[result] {
 		"msg": sprintf("S3 bucket '%s' must have block_public_acls enabled", [input.resource.address]),
 		"severity": "high",
 		"remediation": "Set block_public_acls = true in aws_s3_bucket_public_access_block resource",
+		"category": "security",
+		"frameworks": ["hipaa", "gdpr", "pci_dss", "iso_27001", "soc2"],
 	}
 }
 
@@ -36,6 +38,8 @@ deny[result] {
 		"msg": sprintf("S3 bucket '%s' must have block_public_policy enabled", [input.resource.address]),
 		"severity": "high",
 		"remediation": "Set block_public_policy = true in aws_s3_bucket_public_access_block resource",
+		"category": "security",
+		"frameworks": ["hipaa", "gdpr", "pci_dss", "iso_27001", "soc2"],
 	}
 }
 
@@ -53,6 +57,8 @@ deny[result] {
 		"msg": sprintf("S3 bucket '%s' must have ignore_public_acls enabled", [input.resource.address]),
 		"severity": "high",
 		"remediation": "Set ignore_public_acls = true in aws_s3_bucket_public_access_block resource",
+		"category": "security",
+		"frameworks": ["hipaa", "gdpr", "pci_dss", "iso_27001", "soc2"],
 	}
 }
 
@@ -70,6 +76,8 @@ deny[result] {
 		"msg": sprintf("S3 bucket '%s' must have restrict_public_buckets enabled", [input.resource.address]),
 		"severity": "high",
 		"remediation": "Set restrict_public_buckets = true in aws_s3_bucket_public_access_block resource",
+		"category": "security",
+		"frameworks": ["hipaa", "gdpr", "pci_dss", "iso_27001", "soc2"],
 	}
 }
 
@@ -86,6 +94,8 @@ deny[result] {
 		"msg": sprintf("S3 bucket '%s' has public-read ACL which is not allowed", [input.resource.address]),
 		"severity": "critical",
 		"remediation": "Change ACL to 'private' or use bucket policies for controlled access",
+		"category": "security",
+		"frameworks": ["hipaa", "gdpr", "pci_dss", "iso_27001", "soc2"],
 	}
 }
 
@@ -101,5 +111,7 @@ deny[result] {
 		"msg": sprintf("S3 bucket '%s' has public-read-write ACL which is extremely dangerous", [input.resource.address]),
 		"severity": "critical",
 		"remediation": "Immediately change ACL to 'private'. Public write access is a serious security risk",
+		"category": "security",
+		"frameworks": ["hipaa", "gdpr", "pci_dss", "iso_27001", "soc2"],
 	}
 }

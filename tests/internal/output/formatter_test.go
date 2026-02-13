@@ -43,6 +43,46 @@ func createTestScanResult() output.ScanResult {
 	}
 }
 
+func createTestScanResultWithCompliance() output.ScanResult {
+	result := createTestScanResult()
+	result.PolicyResult = &output.PolicyOutput{
+		Passed: 48,
+		Failed: 1,
+		Violations: []output.PolicyViolationOutput{
+			{
+				PolicyID:        "S3-001",
+				PolicyName:      "S3 Encryption Required",
+				Message:         "S3 bucket 'aws_s3_bucket.data' must have encryption",
+				Severity:        "high",
+				ResourceType:    "aws_s3_bucket",
+				ResourceAddress: "aws_s3_bucket.data",
+				Remediation:     "Add server_side_encryption_configuration",
+				Category:        "security",
+				Frameworks:      []string{"hipaa", "pci_dss", "iso_27001", "gdpr", "soc2"},
+			},
+		},
+		ComplianceResult: &output.ComplianceOutput{
+			OverallPercentage: 97.96,
+			TotalPolicies:     49,
+			PassingPolicies:   48,
+			FailingPolicies:   1,
+			Categories: map[string]output.CategoryScore{
+				"security": {Percentage: 97.62, Passed: 41, Failed: 1, Total: 42},
+				"tagging":  {Percentage: 100, Passed: 4, Failed: 0, Total: 4},
+				"cost":     {Percentage: 100, Passed: 3, Failed: 0, Total: 3},
+			},
+			Frameworks: map[string]output.FrameworkScore{
+				"hipaa":     {Percentage: 96.15, Passed: 25, Failed: 1, Total: 26},
+				"pci_dss":   {Percentage: 97.06, Passed: 33, Failed: 1, Total: 34},
+				"iso_27001": {Percentage: 97.44, Passed: 38, Failed: 1, Total: 39},
+				"gdpr":      {Percentage: 94.44, Passed: 17, Failed: 1, Total: 18},
+				"soc2":      {Percentage: 97.5, Passed: 39, Failed: 1, Total: 40},
+			},
+		},
+	}
+	return result
+}
+
 // JSON Formatter Tests
 func TestJSONFormatter_Format(t *testing.T) {
 	formatter := output.NewJSONFormatter()
@@ -380,6 +420,89 @@ func TestSARIFFormatter_EmptyResult(t *testing.T) {
 	err = json.Unmarshal(buf.Bytes(), &parsed)
 	require.NoError(t, err)
 	assert.Equal(t, "2.1.0", parsed["version"])
+}
+
+// Compliance JSON Tests
+func TestJSONFormatter_WithCompliance(t *testing.T) {
+	formatter := output.NewJSONFormatter()
+	result := createTestScanResultWithCompliance()
+
+	var buf bytes.Buffer
+	err := formatter.Format(&buf, result)
+	require.NoError(t, err)
+
+	// Parse and verify compliance fields
+	var parsed map[string]interface{}
+	err = json.Unmarshal(buf.Bytes(), &parsed)
+	require.NoError(t, err)
+
+	// Verify policy_result exists
+	pr, ok := parsed["policy_result"].(map[string]interface{})
+	require.True(t, ok)
+
+	// Verify violations have category and frameworks
+	violations, ok := pr["violations"].([]interface{})
+	require.True(t, ok)
+	require.Len(t, violations, 1)
+
+	v := violations[0].(map[string]interface{})
+	assert.Equal(t, "security", v["category"])
+	frameworks, ok := v["frameworks"].([]interface{})
+	require.True(t, ok)
+	assert.Len(t, frameworks, 5)
+
+	// Verify compliance section exists
+	compliance, ok := pr["compliance"].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, float64(49), compliance["total_policies"])
+	assert.Equal(t, float64(48), compliance["passing_policies"])
+	assert.Equal(t, float64(1), compliance["failing_policies"])
+
+	// Verify categories
+	categories, ok := compliance["categories"].(map[string]interface{})
+	require.True(t, ok)
+	assert.Contains(t, categories, "security")
+	assert.Contains(t, categories, "tagging")
+	assert.Contains(t, categories, "cost")
+
+	// Verify frameworks
+	fws, ok := compliance["frameworks"].(map[string]interface{})
+	require.True(t, ok)
+	assert.Contains(t, fws, "hipaa")
+	assert.Contains(t, fws, "pci_dss")
+	assert.Contains(t, fws, "iso_27001")
+	assert.Contains(t, fws, "gdpr")
+	assert.Contains(t, fws, "soc2")
+}
+
+func TestJSONFormatter_WithoutCompliance_BackwardCompat(t *testing.T) {
+	formatter := output.NewJSONFormatter()
+	result := createTestScanResult()
+	// No PolicyResult set — compliance key should be omitted
+
+	var buf bytes.Buffer
+	err := formatter.Format(&buf, result)
+	require.NoError(t, err)
+
+	// Verify compliance is not in output
+	assert.NotContains(t, buf.String(), `"compliance"`)
+}
+
+func TestJSONFormatter_PolicyResult_NilCompliance(t *testing.T) {
+	formatter := output.NewJSONFormatter()
+	result := createTestScanResult()
+	result.PolicyResult = &output.PolicyOutput{
+		Passed: 47,
+		Failed: 0,
+		// ComplianceResult is nil
+	}
+
+	var buf bytes.Buffer
+	err := formatter.Format(&buf, result)
+	require.NoError(t, err)
+
+	// compliance key should be omitted when nil
+	assert.NotContains(t, buf.String(), `"compliance"`)
 }
 
 // Test severity mapping

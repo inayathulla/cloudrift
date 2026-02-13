@@ -21,11 +21,15 @@ func TestViolation_Fields(t *testing.T) {
 		ResourceType:    "aws_s3_bucket",
 		ResourceAddress: "aws_s3_bucket.test",
 		Remediation:     "Enable encryption",
+		Category:        "security",
+		Frameworks:      []string{"hipaa", "pci_dss", "iso_27001", "gdpr", "soc2"},
 	}
 
 	assert.Equal(t, "S3-001", v.PolicyID)
 	assert.Equal(t, "S3 Encryption Required", v.PolicyName)
 	assert.Equal(t, policy.SeverityHigh, v.Severity)
+	assert.Equal(t, "security", v.Category)
+	assert.Equal(t, []string{"hipaa", "pci_dss", "iso_27001", "gdpr", "soc2"}, v.Frameworks)
 }
 
 // Test EvaluationResult methods
@@ -88,6 +92,32 @@ func TestEvaluationResult_HasCriticalViolations(t *testing.T) {
 			assert.Equal(t, tc.expected, tc.result.HasCriticalViolations())
 		})
 	}
+}
+
+func TestEvaluationResult_ByCategory(t *testing.T) {
+	result := policy.EvaluationResult{
+		Violations: []policy.Violation{
+			{PolicyID: "S3-001", Category: "security"},
+			{PolicyID: "TAG-001", Category: "tagging"},
+			{PolicyID: "SG-001", Category: "security"},
+			{PolicyID: "COST-002", Category: "cost"},
+		},
+	}
+
+	security := result.ByCategory("security")
+	assert.Len(t, security, 2)
+	assert.Equal(t, "S3-001", security[0].PolicyID)
+	assert.Equal(t, "SG-001", security[1].PolicyID)
+
+	tagging := result.ByCategory("tagging")
+	assert.Len(t, tagging, 1)
+	assert.Equal(t, "TAG-001", tagging[0].PolicyID)
+
+	cost := result.ByCategory("cost")
+	assert.Len(t, cost, 1)
+
+	empty := result.ByCategory("nonexistent")
+	assert.Empty(t, empty)
 }
 
 func TestEvaluationResult_BySeverity(t *testing.T) {
@@ -308,6 +338,45 @@ deny[result] {
 	assert.Equal(t, "Bucket must be encrypted", v.Message)
 	assert.Equal(t, policy.Severity("critical"), v.Severity)
 	assert.Equal(t, "Add encryption configuration", v.Remediation)
+}
+
+func TestEngine_Evaluate_RichViolation_WithCompliance(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	policyContent := `
+package test.compliance
+
+deny[result] {
+	input.resource.type == "aws_s3_bucket"
+	result := {
+		"policy_id": "S3-001",
+		"policy_name": "Encryption Required",
+		"msg": "Bucket must be encrypted",
+		"severity": "high",
+		"remediation": "Add encryption configuration",
+		"category": "security",
+		"frameworks": ["hipaa", "pci_dss", "iso_27001", "gdpr", "soc2"]
+	}
+}
+`
+	err := os.WriteFile(filepath.Join(tmpDir, "compliance.rego"), []byte(policyContent), 0644)
+	require.NoError(t, err)
+
+	engine, err := policy.NewEngine(tmpDir)
+	require.NoError(t, err)
+
+	input := policy.NewPolicyInput("aws_s3_bucket", "aws_s3_bucket.data")
+	result, err := engine.Evaluate(context.Background(), input)
+
+	require.NoError(t, err)
+	require.Len(t, result.Violations, 1)
+
+	v := result.Violations[0]
+	assert.Equal(t, "S3-001", v.PolicyID)
+	assert.Equal(t, "security", v.Category)
+	assert.Equal(t, []string{"hipaa", "pci_dss", "iso_27001", "gdpr", "soc2"}, v.Frameworks)
+	assert.Equal(t, "Bucket must be encrypted", v.Message)
+	assert.Equal(t, policy.Severity("high"), v.Severity)
 }
 
 func TestEngine_Evaluate_NonMatchingResourceType(t *testing.T) {

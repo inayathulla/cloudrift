@@ -15,12 +15,14 @@ import (
 var BuiltinPolicies embed.FS
 
 // LoadBuiltinPolicies creates an Engine with the built-in policies.
+// The temp directory used for extraction is cleaned up after compilation
+// since all modules are held in memory by the OPA compiler.
 func LoadBuiltinPolicies() (*Engine, error) {
-	// Create a temp directory to extract embedded policies
 	tmpDir, err := os.MkdirTemp("", "cloudrift-policies-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
+	defer os.RemoveAll(tmpDir)
 
 	// Extract embedded policies to temp directory
 	err = fs.WalkDir(BuiltinPolicies, "policies", func(path string, d fs.DirEntry, err error) error {
@@ -57,11 +59,11 @@ func LoadBuiltinPolicies() (*Engine, error) {
 
 // LoadPoliciesWithBuiltins creates an Engine with both built-in and custom policies.
 func LoadPoliciesWithBuiltins(customPaths ...string) (*Engine, error) {
-	// First extract built-in policies
 	tmpDir, err := os.MkdirTemp("", "cloudrift-policies-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
+	defer os.RemoveAll(tmpDir)
 
 	// Extract embedded policies
 	err = fs.WalkDir(BuiltinPolicies, "policies", func(path string, d fs.DirEntry, err error) error {

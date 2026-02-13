@@ -5,7 +5,7 @@
     <strong>Pre-apply infrastructure governance for Terraform</strong>
   </p>
   <p align="center">
-    Validate infrastructure changes against policies and live AWS state — before you apply
+    Validate infrastructure changes against 49 compliance policies and live AWS state — before you apply
   </p>
 </p>
 
@@ -42,6 +42,7 @@
 
 - [Why Cloudrift?](#why-cloudrift)
 - [Features](#features)
+- [Compliance Frameworks](#compliance-frameworks)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Usage](#usage)
@@ -63,6 +64,7 @@
 | **Pre-apply validation** | ✅ | ❌ | ✅ | ❌ |
 | **Live state comparison** | ✅ | ❌ | ❌ | ✅ |
 | **Policy engine (OPA)** | ✅ | Sentinel ($$$) | ✅ | ❌ |
+| **Compliance scoring** | ✅ | ❌ | ✅ | ❌ |
 | **SARIF output** | ✅ | ❌ | ✅ | ❌ |
 | **Open source** | ✅ | ❌ | ✅ | ✅ |
 | **Self-hosted** | ✅ | ❌ | ✅ | ✅ |
@@ -72,11 +74,34 @@
 ## Features
 
 - **Drift Detection** — Compare Terraform plans against live AWS infrastructure
-- **Policy Engine** — 7 built-in OPA security policies + custom policy support
+- **49 Built-in Policies** — OPA security, tagging, and cost policies across 13 AWS resource types
+- **5 Compliance Frameworks** — SOC 2 Type II, ISO 27001, PCI DSS, HIPAA, GDPR
+- **Compliance Scoring** — Per-category and per-framework pass/fail percentages
 - **Multiple Output Formats** — Console, JSON, SARIF for CI/CD integration
-- **Multi-Service Support** — S3 buckets and EC2 instances
-- **CI/CD Ready** — GitHub Actions, GitLab CI, Jenkins integration
+- **Multi-Service Support** — S3 buckets and EC2 instances (drift), 13 resource types (policies)
+- **Custom Policies** — Extend with your own OPA `.rego` policies
+- **CI/CD Ready** — GitHub Actions, GitLab CI, Jenkins with `--fail-on-violation`
 - **GitHub Security Integration** — SARIF output for Security tab
+
+## Compliance Frameworks
+
+Cloudrift maps every built-in policy to industry compliance frameworks. Policy counts are computed dynamically from the `.rego` files — never hardcoded.
+
+| Framework | Policies | Description |
+|-----------|----------|-------------|
+| **SOC 2 Type II** | 40 | Trust services criteria — security, availability, confidentiality |
+| **ISO 27001** | 39 | Information security management system controls |
+| **PCI DSS** | 34 | Payment card industry data security standard |
+| **HIPAA** | 26 | Health data privacy and security rules |
+| **GDPR** | 18 | EU data protection and privacy regulation |
+
+### Policy Categories
+
+| Category | Policies | Description |
+|----------|----------|-------------|
+| **Security** | 42 | Encryption, access control, network, IAM, audit logging |
+| **Tagging** | 4 | Resource tagging for cost allocation and governance |
+| **Cost** | 3 | Instance sizing and generation optimization |
 
 ## Installation
 
@@ -138,7 +163,7 @@ cloudrift scan --service=s3
 # Scan EC2 instances
 cloudrift scan --service=ec2
 
-# Output as JSON
+# Output as JSON with compliance scoring
 cloudrift scan --service=s3 --format=json
 
 # Fail CI/CD on policy violations
@@ -166,12 +191,16 @@ cloudrift scan [flags]
 
 ### Supported Resources
 
-| Resource | Service | Attributes Checked |
-|----------|---------|-------------------|
+**Drift detection** (plan vs live state comparison):
+
+| Resource | Service Flag | Attributes Checked |
+|----------|-------------|-------------------|
 | S3 Buckets | `--service=s3` | ACL, tags, versioning, encryption, logging, public access block, lifecycle rules |
 | EC2 Instances | `--service=ec2` | Instance type, AMI, subnet, security groups, tags, EBS optimization, monitoring |
 
-For detailed usage instructions, see [docs/USAGE.md](docs/USAGE.md).
+**Policy evaluation** covers 13 AWS resource types (automatically applied during drift scans):
+
+`aws_s3_bucket`, `aws_instance`, `aws_security_group`, `aws_db_instance`, `aws_iam_policy`, `aws_iam_role`, `aws_iam_user_policy`, `aws_cloudtrail`, `aws_kms_key`, `aws_lb`, `aws_lb_listener`, `aws_ebs_volume`, `aws_ebs_snapshot_copy`, `aws_lambda_function`, `aws_cloudwatch_log_group`, `aws_default_security_group`, `aws_subnet`, `aws_secretsmanager_secret`
 
 ## Output Formats
 
@@ -184,14 +213,26 @@ cloudrift scan --service=s3
 ```
 🚀 Starting Cloudrift scan...
 🔐 Connected as: arn:aws:iam::123456789012:root [us-east-1]
-✔️  Evaluated 7 policies in 23ms
+✔️  Evaluated 49 policies in 23ms
 ⚠️  Found 2 policy violations
 
-⚠️  Drift detected!
-🪣 my-bucket
-  🔐 Encryption mismatch:
-    • expected → "AES256"
-    • actual   → ""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+              COMPLIANCE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Overall: 95.9% (47/49 policies passing)
+
+  Categories:
+    cost         100.0% (3/3)
+    security     95.2% (40/42)
+    tagging      100.0% (4/4)
+
+  Frameworks:
+    gdpr         94.4% (17/18)
+    hipaa        96.2% (25/26)
+    iso_27001    97.4% (38/39)
+    pci_dss      97.1% (33/34)
+    soc2         97.5% (39/40)
 ```
 
 ### JSON
@@ -205,14 +246,23 @@ cloudrift scan --service=s3 --format=json
   "service": "S3",
   "account_id": "123456789012",
   "drift_count": 1,
-  "drifts": [
-    {
-      "resource_name": "my-bucket",
-      "diffs": {
-        "encryption_algorithm": ["AES256", ""]
+  "policy_result": {
+    "violations": [
+      {
+        "policy_id": "S3-001",
+        "severity": "high",
+        "category": "security",
+        "frameworks": ["hipaa", "pci_dss", "iso_27001", "gdpr", "soc2"],
+        "remediation": "Add server_side_encryption_configuration block"
       }
+    ],
+    "compliance": {
+      "overall_percentage": 97.96,
+      "total_policies": 49,
+      "categories": { "security": { "percentage": 97.62, "passed": 41, "total": 42 } },
+      "frameworks": { "soc2": { "percentage": 97.5, "passed": 39, "total": 40 } }
     }
-  ]
+  }
 }
 ```
 
@@ -226,19 +276,139 @@ Upload to GitHub Code Scanning for Security tab integration.
 
 ## Policy Engine
 
-Cloudrift includes 7 built-in OPA security policies:
+Cloudrift includes **49 built-in OPA policies** across 17 `.rego` files, covering security, tagging, and cost optimization. All policies are embedded in the binary and loaded automatically.
 
-| Policy | Severity | Description |
-|--------|----------|-------------|
-| S3-001 | high | S3 buckets must have encryption enabled |
-| S3-003 to S3-006 | high | S3 public access block settings |
-| S3-007, S3-008 | critical | No public ACLs allowed |
-| TAG-001 | medium | Environment tag required |
-| TAG-002 to TAG-004 | low | Owner, Project, Name tags recommended |
+### Security Policies (42 policies)
+
+#### S3 Storage
+
+| Policy | Severity | Rule | Frameworks |
+|--------|----------|------|------------|
+| S3-001 | high/critical | S3 encryption required (plan + live) | HIPAA, PCI DSS, ISO 27001, GDPR, SOC 2 |
+| S3-002 | low | KMS encryption recommended over AES256 | HIPAA, PCI DSS, SOC 2 |
+| S3-003 | high | Block public ACLs | HIPAA, GDPR, PCI DSS, ISO 27001, SOC 2 |
+| S3-004 | high | Block public policy | HIPAA, GDPR, PCI DSS, ISO 27001, SOC 2 |
+| S3-005 | high | Ignore public ACLs | HIPAA, GDPR, PCI DSS, ISO 27001, SOC 2 |
+| S3-006 | high | Restrict public buckets | HIPAA, GDPR, PCI DSS, ISO 27001, SOC 2 |
+| S3-007 | critical | No public-read ACL | HIPAA, GDPR, PCI DSS, ISO 27001, SOC 2 |
+| S3-008 | critical | No public-read-write ACL | HIPAA, GDPR, PCI DSS, ISO 27001, SOC 2 |
+| S3-009 | low | Versioning recommended | ISO 27001, SOC 2 |
+
+#### EC2 Compute
+
+| Policy | Severity | Rule | Frameworks |
+|--------|----------|------|------------|
+| EC2-001 | medium | IMDSv2 required | PCI DSS, ISO 27001, SOC 2 |
+| EC2-002 | high | Root volume encryption | HIPAA, PCI DSS, ISO 27001, GDPR, SOC 2 |
+| EC2-003 | medium | Public IP warning | PCI DSS, ISO 27001, SOC 2 |
+
+#### Security Groups
+
+| Policy | Severity | Rule | Frameworks |
+|--------|----------|------|------------|
+| SG-001 | critical | No unrestricted SSH (0.0.0.0/0 + ::/0) | PCI DSS, ISO 27001, SOC 2 |
+| SG-002 | critical | No unrestricted RDP | PCI DSS, ISO 27001, SOC 2 |
+| SG-003 | critical | No unrestricted all-ports | PCI DSS, ISO 27001, SOC 2 |
+| SG-004 | high | Database ports not public | HIPAA, PCI DSS, ISO 27001, SOC 2 |
+
+#### RDS Databases
+
+| Policy | Severity | Rule | Frameworks |
+|--------|----------|------|------------|
+| RDS-001 | high | Storage encryption required | HIPAA, PCI DSS, ISO 27001, GDPR, SOC 2 |
+| RDS-002 | critical | No public access | HIPAA, PCI DSS, ISO 27001, GDPR, SOC 2 |
+| RDS-003 | medium | Backup retention >= 7 days | HIPAA, ISO 27001, SOC 2 |
+| RDS-004 | medium | Deletion protection enabled | ISO 27001, SOC 2 |
+| RDS-005 | low | Multi-AZ recommended | HIPAA, ISO 27001, SOC 2 |
+
+#### IAM
+
+| Policy | Severity | Rule | Frameworks |
+|--------|----------|------|------------|
+| IAM-001 | critical | No wildcard (*) IAM actions | HIPAA, PCI DSS, ISO 27001, GDPR, SOC 2 |
+| IAM-002 | medium | No inline policies on users | PCI DSS, ISO 27001, SOC 2 |
+| IAM-003 | high | Role trust not overly broad | PCI DSS, ISO 27001, SOC 2 |
+
+#### CloudTrail
+
+| Policy | Severity | Rule | Frameworks |
+|--------|----------|------|------------|
+| CT-001 | high | KMS encryption required | HIPAA, PCI DSS, ISO 27001, GDPR, SOC 2 |
+| CT-002 | medium | Log file validation enabled | PCI DSS, ISO 27001, SOC 2 |
+| CT-003 | medium | Multi-region trail | HIPAA, PCI DSS, ISO 27001, SOC 2 |
+
+#### KMS
+
+| Policy | Severity | Rule | Frameworks |
+|--------|----------|------|------------|
+| KMS-001 | high | Key rotation enabled | HIPAA, PCI DSS, ISO 27001, SOC 2 |
+| KMS-002 | medium | Deletion window >= 14 days | ISO 27001, SOC 2 |
+
+#### ELB / ALB
+
+| Policy | Severity | Rule | Frameworks |
+|--------|----------|------|------------|
+| ELB-001 | medium | Access logging enabled | HIPAA, PCI DSS, ISO 27001, SOC 2 |
+| ELB-002 | high | HTTPS listener required | HIPAA, PCI DSS, ISO 27001, GDPR, SOC 2 |
+| ELB-003 | medium | Deletion protection enabled | ISO 27001, SOC 2 |
+
+#### EBS
+
+| Policy | Severity | Rule | Frameworks |
+|--------|----------|------|------------|
+| EBS-001 | high | Volume encryption required | HIPAA, PCI DSS, ISO 27001, GDPR, SOC 2 |
+| EBS-002 | high | Snapshot encryption required | HIPAA, PCI DSS, ISO 27001, GDPR |
+
+#### Lambda
+
+| Policy | Severity | Rule | Frameworks |
+|--------|----------|------|------------|
+| LAMBDA-001 | medium | X-Ray tracing enabled | SOC 2, ISO 27001 |
+| LAMBDA-002 | medium | VPC configuration recommended | HIPAA, PCI DSS, ISO 27001 |
+
+#### CloudWatch
+
+| Policy | Severity | Rule | Frameworks |
+|--------|----------|------|------------|
+| LOG-001 | medium | Log group KMS encryption | HIPAA, PCI DSS, GDPR, SOC 2 |
+| LOG-002 | medium | Log retention policy set | HIPAA, GDPR, SOC 2, ISO 27001 |
+
+#### VPC / Networking
+
+| Policy | Severity | Rule | Frameworks |
+|--------|----------|------|------------|
+| VPC-001 | high | Default security group blocks all traffic | PCI DSS, ISO 27001, SOC 2 |
+| VPC-002 | medium | No auto-assign public IP on subnets | PCI DSS, ISO 27001 |
+
+#### Secrets Manager
+
+| Policy | Severity | Rule | Frameworks |
+|--------|----------|------|------------|
+| SECRET-001 | medium | Customer-managed KMS encryption | HIPAA, PCI DSS, GDPR, SOC 2 |
+| SECRET-002 | medium | Automatic rotation configured | PCI DSS, ISO 27001, SOC 2 |
+
+### Tagging Policies (4 policies)
+
+| Policy | Severity | Rule |
+|--------|----------|------|
+| TAG-001 | medium | Environment tag required (SOC 2) |
+| TAG-002 | low | Owner tag recommended |
+| TAG-003 | low | Project tag recommended |
+| TAG-004 | low | Name tag recommended |
+
+TAG policies apply to all taggable resource types: S3, EC2, Security Groups, RDS, Lambda, ECS, EKS, ALB, VPC, EBS, KMS, CloudTrail, CloudWatch, Secrets Manager.
+
+### Cost Policies (3 policies)
+
+| Policy | Severity | Rule |
+|--------|----------|------|
+| EC2-005 | medium | Very large instance type review |
+| COST-002 | medium/low | Very large instance size (24xlarge/16xlarge) |
+| COST-003 | low | Previous generation instance family |
 
 ### Custom Policies
 
-Create custom OPA policies:
+Extend Cloudrift with your own OPA policies:
 
 ```rego
 # my-policies/custom.rego
@@ -250,8 +420,12 @@ deny[result] {
 
     result := {
         "policy_id": "CUSTOM-001",
-        "msg": "S3 bucket must have CostCenter tag",
-        "severity": "medium"
+        "policy_name": "CostCenter Tag Required",
+        "msg": sprintf("S3 bucket '%s' must have CostCenter tag", [input.resource.address]),
+        "severity": "medium",
+        "remediation": "Add tags = { CostCenter = \"...\" }",
+        "category": "tagging",
+        "frameworks": ["soc2"],
     }
 }
 ```
@@ -259,6 +433,8 @@ deny[result] {
 ```bash
 cloudrift scan --service=s3 --policy-dir=./my-policies
 ```
+
+Custom policies are loaded alongside built-in policies. Use `deny` rules for violations (block CI/CD with `--fail-on-violation`) and `warn` rules for advisory findings.
 
 ## CI/CD Integration
 
@@ -303,7 +479,7 @@ jobs:
 
 ```yaml
 drift-scan:
-  image: golang:1.21
+  image: golang:1.24
   script:
     - go install github.com/inayathulla/cloudrift@latest
     - terraform init && terraform plan -out=tfplan.binary
@@ -341,7 +517,7 @@ flutter pub get && flutter run -d macos   # or -d linux / -d windows
 | **Interactive Dashboard** | Clickable KPI cards, drift trend charts, severity donut, framework compliance rings |
 | **Drift Visualization** | Three-column diff viewer: Attribute / Expected (Terraform) / Actual (AWS) |
 | **Resource Builder** | Three modes: Terraform (auto-generate plan.json), Manual (S3/EC2 forms), Upload (drag & drop) |
-| **Policy Dashboard** | 21 OPA policies with compliance mapping (HIPAA, GDPR, ISO 27001, PCI DSS), severity filters, remediation guidance |
+| **Policy Dashboard** | 49 OPA policies with compliance mapping (SOC 2, HIPAA, GDPR, ISO 27001, PCI DSS), severity filters, remediation guidance |
 | **Compliance Scoring** | Animated compliance rings with category breakdowns and trend tracking |
 | **Scan History** | Persistent local history with trend charts and human-readable durations |
 | **Go API Server** | Backend wrapping Cloudrift CLI for web mode — scan, config, health, Terraform plan generation |
@@ -381,7 +557,7 @@ plan_path: ./examples/ec2-plan.json
 cloudrift/
 ├── cmd/                          # CLI commands
 │   ├── root.go
-│   └── scan.go
+│   └── scan.go                   # Scan command with compliance scoring
 ├── internal/
 │   ├── aws/                      # AWS API integrations
 │   │   ├── config.go             # AWS SDK configuration
@@ -394,23 +570,31 @@ cloudrift/
 │   │   ├── s3_printer.go         # S3 console output
 │   │   └── ec2_printer.go        # EC2 console output
 │   ├── output/                   # Output formatters
+│   │   ├── formatter.go          # Format types, compliance structs
 │   │   ├── json.go               # JSON formatter
 │   │   ├── sarif.go              # SARIF formatter
 │   │   └── console.go            # Console formatter
 │   ├── policy/                   # OPA policy engine
-│   │   ├── engine.go             # Policy evaluation
-│   │   ├── loader.go             # Policy loading
-│   │   └── policies/             # Built-in policies
-│   │       ├── security/
-│   │       ├── tagging/
-│   │       └── cost/
-│   ├── models/                   # Data structures
-│   └── parser/                   # Terraform plan parser
+│   │   ├── engine.go             # Policy evaluation (deny/warn rules)
+│   │   ├── loader.go             # Embedded policy loading
+│   │   ├── registry.go           # Dynamic policy metadata extraction
+│   │   ├── result.go             # Violation, EvaluationResult structs
+│   │   ├── input.go              # PolicyInput structs
+│   │   └── policies/             # 49 built-in OPA policies
+│   │       ├── security/         # 42 security policies (17 .rego files)
+│   │       ├── tagging/          # 4 tagging policies
+│   │       └── cost/             # 3 cost policies
+│   ├── models/                   # Data structures (S3Bucket, EC2Instance)
+│   └── parser/                   # Terraform plan JSON parser
+├── tests/                        # Unit tests
+│   └── internal/
+│       ├── detector/             # Drift detection tests
+│       ├── output/               # Formatter tests
+│       ├── parser/               # Parser tests
+│       └── policy/               # Policy engine + registry tests
 ├── config/                       # Example configurations
 ├── examples/                     # Example Terraform plans
-├── docs/                         # Documentation
-│   └── USAGE.md                  # Detailed usage guide
-└── tests/                        # Unit tests
+└── docs/                         # Documentation
 ```
 
 ## Roadmap
@@ -420,21 +604,24 @@ cloudrift/
 - [x] EC2 drift detection
 - [x] JSON output format
 - [x] SARIF output format
-- [x] OPA policy engine
-- [x] Built-in security policies
+- [x] OPA policy engine with 49 built-in policies
+- [x] 5 compliance frameworks (SOC 2, ISO 27001, PCI DSS, HIPAA, GDPR)
+- [x] Compliance scoring (overall, per-category, per-framework)
+- [x] Dynamic policy registry (no hardcoded counts)
 - [x] Custom policy support
-- [x] `--fail-on-violation` flag
+- [x] `--fail-on-violation` flag for CI/CD
 - [x] Desktop dashboard ([Cloudrift UI](https://github.com/inayathulla/cloudrift-ui))
 
 ### In Progress 🚧
 - [ ] IAM drift detection
-- [ ] Security Groups detection
+- [ ] Security Groups drift detection
 - [ ] RDS drift detection
 
 ### Planned 📋
-- [ ] Compliance packs (CIS, SOC2, HIPAA)
+- [ ] CIS AWS Foundations Benchmark policies
 - [ ] Multi-account scanning
-- [ ] Slack/PagerDuty alerts
+- [ ] Slack/PagerDuty alert integration
+- [ ] Policy exception management
 
 ## Contributing
 
@@ -455,11 +642,19 @@ go test ./...
 ./cloudrift scan --service=s3 --config=config/cloudrift.yml
 ```
 
+### Adding a New Policy
+
+1. Create or edit a `.rego` file under `internal/policy/policies/<category>/`
+2. Use `deny[result]` for violations or `warn[result]` for warnings
+3. Include `policy_id`, `policy_name`, `msg`, `severity`, `remediation`, `category`, and `frameworks` in the result object
+4. Policy counts update automatically via the dynamic registry — no hardcoded values to change
+5. Run `go test ./...` to verify
+
 ## Related Projects
 
 | Project | Description |
 |---------|-------------|
-| **[Cloudrift UI](https://github.com/inayathulla/cloudrift-ui)** | Cross-platform security dashboard (Flutter) — Desktop + Web/Docker. Drift diff viewer, resource builder, 21-policy browser with HIPAA/GDPR/ISO/PCI mapping, compliance scoring, Go API server, and dark cybersecurity theme. |
+| **[Cloudrift UI](https://github.com/inayathulla/cloudrift-ui)** | Cross-platform security dashboard (Flutter) — Desktop + Web/Docker. Drift diff viewer, resource builder, 49-policy browser with SOC 2/HIPAA/GDPR/ISO 27001/PCI DSS mapping, compliance scoring, Go API server, and dark cybersecurity theme. |
 
 ## Connect
 

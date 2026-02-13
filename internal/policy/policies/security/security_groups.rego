@@ -19,6 +19,8 @@ deny[result] {
 		"msg": sprintf("Security group rule '%s' allows SSH (port 22) from 0.0.0.0/0", [input.resource.address]),
 		"severity": "critical",
 		"remediation": "Restrict SSH access to specific IP addresses or CIDR blocks. Use a bastion host or VPN",
+		"category": "security",
+		"frameworks": ["pci_dss", "iso_27001", "soc2"],
 	}
 }
 
@@ -38,6 +40,8 @@ deny[result] {
 		"msg": sprintf("Security group rule '%s' allows RDP (port 3389) from 0.0.0.0/0", [input.resource.address]),
 		"severity": "critical",
 		"remediation": "Restrict RDP access to specific IP addresses. Use a bastion host or VPN",
+		"category": "security",
+		"frameworks": ["pci_dss", "iso_27001", "soc2"],
 	}
 }
 
@@ -57,6 +61,8 @@ deny[result] {
 		"msg": sprintf("Security group rule '%s' allows all ports from 0.0.0.0/0", [input.resource.address]),
 		"severity": "critical",
 		"remediation": "Define specific ports needed and restrict source IP ranges",
+		"category": "security",
+		"frameworks": ["pci_dss", "iso_27001", "soc2"],
 	}
 }
 
@@ -81,6 +87,8 @@ warn[result] {
 		"msg": sprintf("Security group rule '%s' exposes database port %d to 0.0.0.0/0", [input.resource.address, port]),
 		"severity": "high",
 		"remediation": "Never expose database ports to the internet. Use private subnets and VPN",
+		"category": "security",
+		"frameworks": ["hipaa", "pci_dss", "iso_27001", "soc2"],
 	}
 }
 
@@ -100,5 +108,7 @@ deny[result] {
 		"msg": sprintf("Security group '%s' allows SSH (port 22) from 0.0.0.0/0", [input.resource.address]),
 		"severity": "critical",
 		"remediation": "Restrict SSH access to specific IP addresses or CIDR blocks",
+		"category": "security",
+		"frameworks": ["pci_dss", "iso_27001", "soc2"],
 	}
 }

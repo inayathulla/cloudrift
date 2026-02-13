@@ -36,6 +36,12 @@ type Violation struct {
 
 	// Metadata contains additional context about the violation.
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
+
+	// Category classifies the policy (e.g., "security", "tagging", "cost").
+	Category string `json:"category,omitempty"`
+
+	// Frameworks lists compliance frameworks this policy maps to (e.g., "hipaa", "pci_dss").
+	Frameworks []string `json:"frameworks,omitempty"`
 }
 
 // EvaluationResult contains the results of policy evaluation.
@@ -66,6 +72,17 @@ func (r *EvaluationResult) HasCriticalViolations() bool {
 		}
 	}
 	return false
+}
+
+// ByCategory returns violations filtered by category.
+func (r *EvaluationResult) ByCategory(category string) []Violation {
+	var filtered []Violation
+	for _, v := range r.Violations {
+		if v.Category == category {
+			filtered = append(filtered, v)
+		}
+	}
+	return filtered
 }
 
 // BySeverity returns violations filtered by severity.
