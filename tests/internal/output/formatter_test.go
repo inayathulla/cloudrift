@@ -475,6 +475,43 @@ func TestJSONFormatter_WithCompliance(t *testing.T) {
 	assert.Contains(t, fws, "soc2")
 }
 
+func TestJSONFormatter_WithFrameworkFilter(t *testing.T) {
+	formatter := output.NewJSONFormatter()
+	result := createTestScanResultWithCompliance()
+	result.PolicyResult.ComplianceResult.ActiveFrameworks = []string{"hipaa", "gdpr"}
+
+	var buf bytes.Buffer
+	err := formatter.Format(&buf, result)
+	require.NoError(t, err)
+
+	var parsed map[string]interface{}
+	err = json.Unmarshal(buf.Bytes(), &parsed)
+	require.NoError(t, err)
+
+	pr := parsed["policy_result"].(map[string]interface{})
+	compliance := pr["compliance"].(map[string]interface{})
+
+	// active_frameworks should be present
+	afw, ok := compliance["active_frameworks"].([]interface{})
+	require.True(t, ok, "active_frameworks should be present in JSON")
+	assert.Len(t, afw, 2)
+	assert.Equal(t, "hipaa", afw[0])
+	assert.Equal(t, "gdpr", afw[1])
+}
+
+func TestJSONFormatter_WithoutFrameworkFilter_OmitsActiveFrameworks(t *testing.T) {
+	formatter := output.NewJSONFormatter()
+	result := createTestScanResultWithCompliance()
+	// ActiveFrameworks is nil — should be omitted from JSON
+
+	var buf bytes.Buffer
+	err := formatter.Format(&buf, result)
+	require.NoError(t, err)
+
+	assert.NotContains(t, buf.String(), `"active_frameworks"`,
+		"active_frameworks should be omitted when not set")
+}
+
 func TestJSONFormatter_WithoutCompliance_BackwardCompat(t *testing.T) {
 	formatter := output.NewJSONFormatter()
 	result := createTestScanResult()

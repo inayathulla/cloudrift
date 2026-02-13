@@ -38,6 +38,7 @@ type ComplianceOutput struct {
 	FailingPolicies   int                        `json:"failing_policies"`
 	Categories        map[string]CategoryScore   `json:"categories"`
 	Frameworks        map[string]FrameworkScore   `json:"frameworks"`
+	ActiveFrameworks  []string                   `json:"active_frameworks,omitempty"`
 }
 
 // CategoryScore holds pass/fail counts for a single policy category.

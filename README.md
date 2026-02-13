@@ -95,6 +95,23 @@ Cloudrift maps every built-in policy to industry compliance frameworks. Policy c
 | **HIPAA** | 26 | Health data privacy and security rules |
 | **GDPR** | 18 | EU data protection and privacy regulation |
 
+### Framework Filtering
+
+Use `--frameworks` to scope policy evaluation and compliance scoring to specific frameworks. Only policies mapped to at least one selected framework are evaluated and scored. Unknown framework names are rejected with a list of valid options.
+
+```bash
+# HIPAA-only compliance check
+cloudrift scan --service=s3 --frameworks=hipaa
+
+# Multiple frameworks
+cloudrift scan --service=s3 --frameworks=hipaa,gdpr
+
+# JSON output with framework filter (includes active_frameworks in response)
+cloudrift scan --service=s3 --format=json --frameworks=soc2,pci_dss
+```
+
+When `--frameworks` is set, the compliance summary header shows the active filter and JSON output includes an `active_frameworks` array for downstream tooling.
+
 ### Policy Categories
 
 | Category | Policies | Description |
@@ -168,6 +185,9 @@ cloudrift scan --service=s3 --format=json
 
 # Fail CI/CD on policy violations
 cloudrift scan --service=s3 --fail-on-violation
+
+# Filter by compliance frameworks (only HIPAA + SOC 2)
+cloudrift scan --service=s3 --frameworks=hipaa,soc2
 ```
 
 ## Usage
@@ -188,6 +208,7 @@ cloudrift scan [flags]
 | `--fail-on-violation` | - | `false` | Exit non-zero on violations |
 | `--skip-policies` | - | `false` | Skip policy evaluation |
 | `--no-emoji` | - | `false` | Use ASCII instead of emojis |
+| `--frameworks` | - | all | Comma-separated compliance frameworks to evaluate (e.g., `hipaa,soc2`) |
 
 ### Supported Resources
 

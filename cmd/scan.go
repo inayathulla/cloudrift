@@ -23,14 +23,15 @@ import (
 
 // Command-line flags for the scan command.
 var (
-	configPath      string // Path to cloudrift.yml configuration file
-	service         string // AWS service to scan (e.g., "s3", "ec2")
-	outputFormat    string // Output format (console, json, sarif)
-	outputFile      string // Output file path (optional)
-	policyDir       string // Directory containing custom OPA policies
-	failOnViolation bool   // Exit with non-zero code if policy violations found
-	skipPolicies    bool   // Skip policy evaluation
-	noEmoji         bool   // Use ASCII characters instead of emojis
+	configPath       string // Path to cloudrift.yml configuration file
+	service          string // AWS service to scan (e.g., "s3", "ec2")
+	outputFormat     string // Output format (console, json, sarif)
+	outputFile       string // Output file path (optional)
+	policyDir        string // Directory containing custom OPA policies
+	failOnViolation  bool   // Exit with non-zero code if policy violations found
+	skipPolicies     bool   // Skip policy evaluation
+	noEmoji          bool   // Use ASCII characters instead of emojis
+	frameworksFilter string // Comma-separated compliance frameworks to evaluate
 )
 
 // icons holds the characters used for status indicators (emoji or ASCII)
@@ -103,16 +104,42 @@ Flags:
   --fail-on-violation  Exit with non-zero code if policy violations are found
   --skip-policies      Skip policy evaluation (drift detection only)
   --no-emoji           Use ASCII characters instead of emojis
+  --frameworks         Comma-separated compliance frameworks to evaluate (e.g., hipaa,soc2,gdpr)
 
 Example:
   cloudrift scan --config=config/cloudrift.yml --service=s3
   cloudrift scan --service=ec2 --format=json
   cloudrift scan --service=s3 --format=sarif --output=drift-report.sarif
-  cloudrift scan --service=s3 --policy-dir=./my-policies --fail-on-violation`,
+  cloudrift scan --service=s3 --policy-dir=./my-policies --fail-on-violation
+  cloudrift scan --service=s3 --frameworks=hipaa,soc2`,
 	Run: func(cmd *cobra.Command, args []string) {
 		initIcons()
+
+		// Parse and validate --frameworks flag
+		var selectedFrameworks []string
+		if frameworksFilter != "" {
+			for _, fw := range strings.Split(frameworksFilter, ",") {
+				fw = strings.TrimSpace(strings.ToLower(fw))
+				if fw != "" {
+					selectedFrameworks = append(selectedFrameworks, fw)
+				}
+			}
+			reg := getPolicyRegistry()
+			known := reg.KnownFrameworks()
+			for _, fw := range selectedFrameworks {
+				if _, ok := reg.FrameworkTotals[fw]; !ok {
+					color.Red("%s Unknown framework: %s", icons.Cross, fw)
+					color.Yellow("  Available frameworks: %s", strings.Join(known, ", "))
+					os.Exit(1)
+				}
+			}
+		}
+
 		startScan := time.Now()
 		color.Cyan("%s Starting Cloudrift scan...", icons.Rocket)
+		if len(selectedFrameworks) > 0 {
+			color.Cyan("%s Filtering by frameworks: %s", icons.Lock, strings.Join(selectedFrameworks, ", "))
+		}
 
 		viper.SetConfigFile(configPath)
 		if err := viper.ReadInConfig(); err != nil {
@@ -276,6 +303,11 @@ Example:
 			}
 		}
 
+		// Apply framework filtering to policy results
+		if policyResult != nil && len(selectedFrameworks) > 0 {
+			policyResult = filterByFrameworks(policyResult, selectedFrameworks)
+		}
+
 		scanDuration := time.Since(startScan)
 		color.Green("%s Scan completed in %s!", icons.Check, scanDuration.Round(time.Millisecond))
 		fmt.Println()
@@ -300,6 +332,12 @@ Example:
 				os.Exit(1)
 			}
 			defer writer.Close()
+		}
+
+		// Build the filtered registry for compliance scoring (if --frameworks is set)
+		var filteredRegistry *policy.PolicyRegistry
+		if len(selectedFrameworks) > 0 {
+			filteredRegistry = getPolicyRegistry().FilterByFrameworks(selectedFrameworks)
 		}
 
 		// Attach policy results to scan output for non-console formats
@@ -334,7 +372,11 @@ Example:
 					Frameworks:      w.Frameworks,
 				})
 			}
-			po.ComplianceResult = computeCompliance(policyResult)
+			compliance := computeCompliance(policyResult, filteredRegistry)
+			if len(selectedFrameworks) > 0 {
+				compliance.ActiveFrameworks = selectedFrameworks
+			}
+			po.ComplianceResult = compliance
 			scanResult.PolicyResult = po
 		}
 
@@ -353,7 +395,7 @@ Example:
 
 			// Print policy violations if present
 			if policyResult != nil && (len(policyResult.Violations) > 0 || len(policyResult.Warnings) > 0) {
-				printPolicyResults(policyResult)
+				printPolicyResults(policyResult, filteredRegistry, selectedFrameworks)
 			}
 		}
 
@@ -375,10 +417,46 @@ func getPolicyRegistry() *policy.PolicyRegistry {
 	return policyRegistry
 }
 
+// filterByFrameworks returns a new EvaluationResult containing only violations
+// and warnings whose policies map to at least one of the selected frameworks.
+func filterByFrameworks(result *policy.EvaluationResult, frameworks []string) *policy.EvaluationResult {
+	fwSet := make(map[string]bool, len(frameworks))
+	for _, fw := range frameworks {
+		fwSet[fw] = true
+	}
+
+	matches := func(v policy.Violation) bool {
+		for _, fw := range v.Frameworks {
+			if fwSet[fw] {
+				return true
+			}
+		}
+		return false
+	}
+
+	filtered := &policy.EvaluationResult{}
+	for _, v := range result.Violations {
+		if matches(v) {
+			filtered.Violations = append(filtered.Violations, v)
+		}
+	}
+	for _, w := range result.Warnings {
+		if matches(w) {
+			filtered.Warnings = append(filtered.Warnings, w)
+		}
+	}
+	filtered.Failed = len(filtered.Violations)
+	filtered.Passed = result.Passed + result.Failed - filtered.Failed
+	return filtered
+}
+
 // computeCompliance calculates compliance scores from policy evaluation results.
-// Totals are sourced from the dynamic policy registry, not hardcoded.
-func computeCompliance(result *policy.EvaluationResult) *output.ComplianceOutput {
-	reg := getPolicyRegistry()
+// If reg is nil, the full policy registry is used. Pass a filtered registry
+// (from FilterByFrameworks) to scope scoring to selected frameworks.
+func computeCompliance(result *policy.EvaluationResult, reg *policy.PolicyRegistry) *output.ComplianceOutput {
+	if reg == nil {
+		reg = getPolicyRegistry()
+	}
 
 	// Collect unique failed policy IDs (violations only, not warnings)
 	failedPolicies := make(map[string]policy.Violation)
@@ -455,7 +533,9 @@ func computeCompliance(result *policy.EvaluationResult) *output.ComplianceOutput
 }
 
 // printPolicyResults outputs policy evaluation results to console.
-func printPolicyResults(result *policy.EvaluationResult) {
+// reg is the filtered registry when --frameworks is set, or nil for the full registry.
+// activeFrameworks lists the selected frameworks (empty when no filter is active).
+func printPolicyResults(result *policy.EvaluationResult, reg *policy.PolicyRegistry, activeFrameworks []string) {
 	fmt.Println()
 	color.Cyan("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	color.Cyan("              POLICY EVALUATION                   ")
@@ -490,10 +570,14 @@ func printPolicyResults(result *policy.EvaluationResult) {
 	}
 
 	// Print compliance summary
-	compliance := computeCompliance(result)
+	compliance := computeCompliance(result, reg)
 	fmt.Println()
 	color.Cyan("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	color.Cyan("            COMPLIANCE SUMMARY                    ")
+	if len(activeFrameworks) > 0 {
+		color.Cyan("      COMPLIANCE SUMMARY (%s)", strings.ToUpper(strings.Join(activeFrameworks, ", ")))
+	} else {
+		color.Cyan("            COMPLIANCE SUMMARY                    ")
+	}
 	color.Cyan("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println()
 
@@ -702,5 +786,6 @@ func init() {
 	scanCmd.Flags().BoolVar(&failOnViolation, "fail-on-violation", false, "Exit with non-zero code if policy violations found")
 	scanCmd.Flags().BoolVar(&skipPolicies, "skip-policies", false, "Skip policy evaluation")
 	scanCmd.Flags().BoolVar(&noEmoji, "no-emoji", false, "Use ASCII characters instead of emojis")
+	scanCmd.Flags().StringVar(&frameworksFilter, "frameworks", "", "Comma-separated compliance frameworks to evaluate (e.g., hipaa,soc2,gdpr)")
 	rootCmd.AddCommand(scanCmd)
 }

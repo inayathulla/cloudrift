@@ -3,6 +3,7 @@ package policy
 import (
 	"io/fs"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -81,6 +82,90 @@ func inferCategoryFromPath(path string) string {
 	default:
 		return ""
 	}
+}
+
+// FilterByFrameworks returns a new PolicyRegistry containing only policies
+// that map to at least one of the specified frameworks. Totals are recomputed
+// from the filtered set. The original registry is not mutated.
+// If frameworks is empty, a copy of the full registry is returned.
+func (r *PolicyRegistry) FilterByFrameworks(frameworks []string) *PolicyRegistry {
+	if len(frameworks) == 0 {
+		// Return a copy so callers can't mutate the original
+		return r.clone()
+	}
+
+	fwSet := make(map[string]bool, len(frameworks))
+	for _, fw := range frameworks {
+		fwSet[fw] = true
+	}
+
+	filtered := &PolicyRegistry{
+		Policies:       make(map[string]PolicyInfo),
+		CategoryTotals: make(map[string]int),
+		FrameworkTotals: make(map[string]int),
+	}
+
+	for id, p := range r.Policies {
+		if policyMatchesFrameworks(p, fwSet) {
+			filtered.Policies[id] = p
+		}
+	}
+
+	// Recompute totals from the filtered policy set
+	filtered.TotalPolicies = len(filtered.Policies)
+	for _, p := range filtered.Policies {
+		if p.Category != "" {
+			filtered.CategoryTotals[p.Category]++
+		}
+		for _, fw := range p.Frameworks {
+			if fwSet[fw] {
+				filtered.FrameworkTotals[fw]++
+			}
+		}
+	}
+
+	return filtered
+}
+
+// policyMatchesFrameworks returns true if the policy maps to at least one
+// framework in the given set.
+func policyMatchesFrameworks(p PolicyInfo, fwSet map[string]bool) bool {
+	for _, fw := range p.Frameworks {
+		if fwSet[fw] {
+			return true
+		}
+	}
+	return false
+}
+
+// clone returns a deep copy of the registry.
+func (r *PolicyRegistry) clone() *PolicyRegistry {
+	c := &PolicyRegistry{
+		Policies:       make(map[string]PolicyInfo, len(r.Policies)),
+		TotalPolicies:  r.TotalPolicies,
+		CategoryTotals: make(map[string]int, len(r.CategoryTotals)),
+		FrameworkTotals: make(map[string]int, len(r.FrameworkTotals)),
+	}
+	for k, v := range r.Policies {
+		c.Policies[k] = v
+	}
+	for k, v := range r.CategoryTotals {
+		c.CategoryTotals[k] = v
+	}
+	for k, v := range r.FrameworkTotals {
+		c.FrameworkTotals[k] = v
+	}
+	return c
+}
+
+// KnownFrameworks returns a sorted list of all framework names in the registry.
+func (r *PolicyRegistry) KnownFrameworks() []string {
+	fws := make([]string, 0, len(r.FrameworkTotals))
+	for fw := range r.FrameworkTotals {
+		fws = append(fws, fw)
+	}
+	sort.Strings(fws)
+	return fws
 }
 
 // extractPolicyMetadata finds all policy_id occurrences in a .rego file and

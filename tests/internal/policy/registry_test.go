@@ -140,6 +140,95 @@ func TestLoadBuiltinRegistry_SecurityIsDominantCategory(t *testing.T) {
 	assert.Greater(t, reg.CategoryTotals["security"], reg.CategoryTotals["cost"])
 }
 
+func TestPolicyRegistry_FilterByFrameworks_Single(t *testing.T) {
+	reg := policy.LoadBuiltinRegistry()
+	filtered := reg.FilterByFrameworks([]string{"hipaa"})
+
+	// Every policy in the filtered set must map to hipaa
+	for id, p := range filtered.Policies {
+		assert.Contains(t, p.Frameworks, "hipaa",
+			"policy %s should map to hipaa", id)
+	}
+
+	// Filtered total should equal the hipaa total from the full registry
+	assert.Equal(t, reg.FrameworkTotals["hipaa"], filtered.TotalPolicies)
+	assert.Equal(t, 1, len(filtered.FrameworkTotals), "only hipaa should appear in framework totals")
+	assert.Contains(t, filtered.FrameworkTotals, "hipaa")
+}
+
+func TestPolicyRegistry_FilterByFrameworks_Multiple(t *testing.T) {
+	reg := policy.LoadBuiltinRegistry()
+	filtered := reg.FilterByFrameworks([]string{"hipaa", "gdpr"})
+
+	// Every policy must map to at least one of hipaa or gdpr
+	for id, p := range filtered.Policies {
+		hasHipaa := false
+		hasGdpr := false
+		for _, fw := range p.Frameworks {
+			if fw == "hipaa" {
+				hasHipaa = true
+			}
+			if fw == "gdpr" {
+				hasGdpr = true
+			}
+		}
+		assert.True(t, hasHipaa || hasGdpr,
+			"policy %s should map to hipaa or gdpr", id)
+	}
+
+	// Union should be >= either individual count
+	assert.GreaterOrEqual(t, filtered.TotalPolicies, reg.FrameworkTotals["hipaa"])
+	assert.GreaterOrEqual(t, filtered.TotalPolicies, reg.FrameworkTotals["gdpr"])
+	// Only hipaa and gdpr should appear in framework totals
+	assert.Equal(t, 2, len(filtered.FrameworkTotals))
+}
+
+func TestPolicyRegistry_FilterByFrameworks_Empty(t *testing.T) {
+	reg := policy.LoadBuiltinRegistry()
+	filtered := reg.FilterByFrameworks([]string{})
+
+	// Empty filter returns full registry copy
+	assert.Equal(t, reg.TotalPolicies, filtered.TotalPolicies)
+	assert.Equal(t, len(reg.Policies), len(filtered.Policies))
+	assert.Equal(t, reg.CategoryTotals, filtered.CategoryTotals)
+	assert.Equal(t, reg.FrameworkTotals, filtered.FrameworkTotals)
+}
+
+func TestPolicyRegistry_FilterByFrameworks_DoesNotMutateOriginal(t *testing.T) {
+	reg := policy.LoadBuiltinRegistry()
+	originalTotal := reg.TotalPolicies
+	originalPolicyCount := len(reg.Policies)
+
+	_ = reg.FilterByFrameworks([]string{"hipaa"})
+
+	assert.Equal(t, originalTotal, reg.TotalPolicies, "original should not be mutated")
+	assert.Equal(t, originalPolicyCount, len(reg.Policies), "original policy map should not be mutated")
+}
+
+func TestPolicyRegistry_FilterByFrameworks_CategoryTotalsConsistent(t *testing.T) {
+	reg := policy.LoadBuiltinRegistry()
+	filtered := reg.FilterByFrameworks([]string{"soc2"})
+
+	// Sum of filtered category totals should equal filtered total
+	catSum := 0
+	for _, count := range filtered.CategoryTotals {
+		catSum += count
+	}
+	assert.Equal(t, filtered.TotalPolicies, catSum,
+		"sum of filtered category totals must equal filtered total policies")
+}
+
+func TestPolicyRegistry_KnownFrameworks(t *testing.T) {
+	reg := policy.LoadBuiltinRegistry()
+	known := reg.KnownFrameworks()
+
+	assert.Equal(t, 5, len(known))
+	// Should be sorted
+	for i := 1; i < len(known); i++ {
+		assert.True(t, known[i-1] < known[i], "frameworks should be sorted")
+	}
+}
+
 func TestLoadBuiltinRegistry_Idempotent(t *testing.T) {
 	reg1 := policy.LoadBuiltinRegistry()
 	reg2 := policy.LoadBuiltinRegistry()
