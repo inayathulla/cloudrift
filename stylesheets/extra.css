@@ -1,0 +1,131 @@
+/* Cloudrift docs — light-first theme with dark mode toggle */
+
+/* ─── Screenshot images ───────────────────────────────────────────────── */
+
+.md-typeset img {
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* ─── Grid cards ──────────────────────────────────────────────────────── */
+
+.grid.cards > ul > li {
+  border-radius: 8px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.grid.cards > ul > li:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* ─── Severity badges (inline) ────────────────────────────────────────── */
+
+.severity-critical {
+  background: #D32F2F;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  font-weight: 600;
+}
+
+.severity-high {
+  background: #E65100;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  font-weight: 600;
+}
+
+.severity-medium {
+  background: #F9A825;
+  color: #1A1A1A;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  font-weight: 600;
+}
+
+.severity-low {
+  background: #2E7D32;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  font-weight: 600;
+}
+
+/* ─── Framework badges ────────────────────────────────────────────────── */
+
+.framework-badge {
+  background: #283593;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+/* ─── Severity admonitions ────────────────────────────────────────────── */
+
+.md-typeset .admonition.critical,
+.md-typeset details.critical {
+  border-color: #D32F2F;
+}
+.md-typeset .critical > .admonition-title,
+.md-typeset .critical > summary {
+  background-color: rgba(211, 47, 47, 0.1);
+}
+
+.md-typeset .admonition.high,
+.md-typeset details.high {
+  border-color: #E65100;
+}
+.md-typeset .high > .admonition-title,
+.md-typeset .high > summary {
+  background-color: rgba(230, 81, 0, 0.1);
+}
+
+.md-typeset .admonition.medium,
+.md-typeset details.medium {
+  border-color: #F9A825;
+}
+.md-typeset .medium > .admonition-title,
+.md-typeset .medium > summary {
+  background-color: rgba(249, 168, 37, 0.1);
+}
+
+.md-typeset .admonition.low,
+.md-typeset details.low {
+  border-color: #2E7D32;
+}
+.md-typeset .low > .admonition-title,
+.md-typeset .low > summary {
+  background-color: rgba(46, 125, 50, 0.1);
+}
+
+/* ─── Slate (dark) toggle overrides ───────────────────────────────────── */
+
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: #1a1a2e;
+  --md-default-fg-color: #e0e0e0;
+  --md-default-fg-color--light: #a0a0a0;
+  --md-default-fg-color--lighter: #707070;
+  --md-default-fg-color--lightest: #404040;
+  --md-code-bg-color: #16213e;
+  --md-code-fg-color: #e0e0e0;
+  --md-typeset-a-color: #7c8cf8;
+  --md-typeset-table-color: rgba(255, 255, 255, 0.06);
+  --md-typeset-table-color--light: rgba(255, 255, 255, 0.02);
+  --md-footer-bg-color: #16213e;
+  --md-footer-fg-color: #a0a0a0;
+  --md-footer-fg-color--light: #707070;
+  --md-footer-fg-color--lighter: #404040;
+}
+
+[data-md-color-scheme="slate"] .md-typeset img {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
