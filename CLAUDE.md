@@ -61,3 +61,11 @@ plan_path: ./plan.json
 ## Testing
 
 Tests live in `tests/internal/` mirroring the `internal/` package structure. Uses testify for assertions. The main test file `tests/internal/detector/s3_test.go` covers all drift detection scenarios (ACL, tags, versioning, encryption, logging, public access block, lifecycle rules).
+
+## Testing and Documentation
+1. Make sure to add inline comments for each file change.
+2. Make sure to add test cases for code written.
+3. Make sure to test end to end, all scenarios in desktop and web version.
+4. Make sure to optimize before every commit.
+5. Make sure to update mkdocs accordingly.
+6. Before push or commit, always ask which branch to commit.
