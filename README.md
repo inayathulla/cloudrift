@@ -15,6 +15,7 @@
   <a href="https://github.com/inayathulla/cloudrift/actions/workflows/tests.yml"><img src="https://github.com/inayathulla/cloudrift/actions/workflows/tests.yml/badge.svg" alt="Go Test"></a>
   <a href="https://hub.docker.com/r/inayathulla/cloudrift"><img src="https://img.shields.io/docker/pulls/inayathulla/cloudrift" alt="Docker Pulls"></a>
   <a href="https://github.com/inayathulla/cloudrift/stargazers"><img src="https://img.shields.io/github/stars/inayathulla/cloudrift?style=social" alt="GitHub stars"></a>
+  <a href="https://inayathulla.github.io/cloudrift/"><img src="https://img.shields.io/badge/docs-mkdocs-blue?logo=materialformkdocs&logoColor=white" alt="Documentation"></a>
 </p>
 
 <p align="center">
@@ -679,6 +680,7 @@ go test ./...
 
 ## Connect
 
+- **Documentation:** [inayathulla.github.io/cloudrift](https://inayathulla.github.io/cloudrift/)
 - **Issues & Features:** [GitHub Issues](https://github.com/inayathulla/cloudrift/issues)
 - **Email:** [inayathulla2020@gmail.com](mailto:inayathulla2020@gmail.com)
 - **LinkedIn:** [Inayathulla Khan Lavani](https://www.linkedin.com/in/inayathullakhan)
