@@ -164,7 +164,7 @@ terraform show -json tfplan.binary > plan.json
 
 ### 2. Create a configuration file
 
-Create `cloudrift.yml`:
+Create `cloudrift-s3.yml`:
 
 ```yaml
 aws_profile: default
@@ -204,7 +204,7 @@ cloudrift scan [flags]
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--config` | `-c` | `cloudrift.yml` | Path to configuration file |
+| `--config` | `-c` | `cloudrift-s3.yml` | Path to configuration file |
 | `--service` | `-s` | `s3` | AWS service to scan (s3, ec2, iam) |
 | `--format` | `-f` | `console` | Output format (console, json, sarif) |
 | `--output` | `-o` | stdout | Write output to file |
@@ -563,7 +563,7 @@ See the [Cloudrift UI README](https://github.com/inayathulla/cloudrift-ui) for f
 
 **S3 Scanning:**
 ```yaml
-# config/cloudrift.yml
+# config/cloudrift-s3.yml
 aws_profile: default
 region: us-east-1
 plan_path: ./examples/plan.json
@@ -676,7 +676,7 @@ go build -o cloudrift .
 go test ./...
 
 # Run
-./cloudrift scan --service=s3 --config=config/cloudrift.yml
+./cloudrift scan --service=s3 --config=config/cloudrift-s3.yml
 ```
 
 ### Adding a New Policy

@@ -23,7 +23,7 @@ import (
 
 // Command-line flags for the scan command.
 var (
-	configPath       string // Path to cloudrift.yml configuration file
+	configPath       string // Path to cloudrift-s3.yml configuration file
 	service          string // AWS service to scan (e.g., "s3", "ec2")
 	outputFormat     string // Output format (console, json, sarif)
 	outputFile       string // Output file path (optional)
@@ -78,7 +78,7 @@ type DriftDetector interface {
 // scanCmd implements the "cloudrift scan" subcommand.
 //
 // The scan command performs the following steps:
-//  1. Load configuration from cloudrift.yml
+//  1. Load configuration from cloudrift-<service>.yml
 //  2. Initialize AWS SDK and validate credentials
 //  3. Parse the Terraform plan JSON
 //  4. Fetch live state from AWS
@@ -96,7 +96,7 @@ Additionally, it evaluates resources against OPA policies to detect
 security and compliance violations.
 
 Flags:
-  --config, -c         Path to cloudrift.yml configuration file
+  --config, -c         Path to cloudrift config file (e.g., cloudrift-s3.yml)
   --service, -s        AWS service to scan (supports: s3, ec2, iam)
   --format, -f         Output format: console, json, sarif (default: console)
   --output, -o         Write output to file instead of stdout
@@ -107,7 +107,7 @@ Flags:
   --frameworks         Comma-separated compliance frameworks to evaluate (e.g., hipaa,soc2,gdpr)
 
 Example:
-  cloudrift scan --config=config/cloudrift.yml --service=s3
+  cloudrift scan --config=config/cloudrift-s3.yml --service=s3
   cloudrift scan --service=ec2 --format=json
   cloudrift scan --service=s3 --format=sarif --output=drift-report.sarif
   cloudrift scan --service=s3 --policy-dir=./my-policies --fail-on-violation
@@ -878,7 +878,7 @@ func buildPolicyInputs(service string, planResources, liveResources interface{},
 }
 
 func init() {
-	scanCmd.Flags().StringVarP(&configPath, "config", "c", "cloudrift.yml", "Path to Cloudrift config file")
+	scanCmd.Flags().StringVarP(&configPath, "config", "c", "cloudrift-s3.yml", "Path to Cloudrift config file")
 	scanCmd.Flags().StringVarP(&service, "service", "s", "s3", "AWS service to scan (e.g., s3)")
 	scanCmd.Flags().StringVarP(&outputFormat, "format", "f", "console", "Output format: console, json, sarif")
 	scanCmd.Flags().StringVarP(&outputFile, "output", "o", "", "Write output to file instead of stdout")

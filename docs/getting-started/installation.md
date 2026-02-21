@@ -32,7 +32,7 @@ docker run --rm \
   -v ~/.aws:/root/.aws:ro \
   -v $(pwd):/work \
   inayathulla/cloudrift:latest scan \
-  --config=/work/cloudrift.yml \
+  --config=/work/cloudrift-s3.yml \
   --service=s3
 ```
 
@@ -82,6 +82,6 @@ The multi-stage build compiles a statically-linked binary (`CGO_ENABLED=0`) and 
 
 ## Next Steps
 
-- [Configure Cloudrift](configuration.md) with a `cloudrift.yml` file
+- [Configure Cloudrift](configuration.md) with a `cloudrift-s3.yml` file
 - [Set up AWS credentials](aws-credentials.md) with the right permissions
 - [Run your first scan](../cli/scan-command.md)

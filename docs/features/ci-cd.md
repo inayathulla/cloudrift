@@ -111,7 +111,7 @@ jobs:
             -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
             -v $(pwd):/work \
             inayathulla/cloudrift:latest scan \
-            --config=/work/cloudrift.yml \
+            --config=/work/cloudrift-s3.yml \
             --service=s3 \
             --fail-on-violation \
             --no-emoji

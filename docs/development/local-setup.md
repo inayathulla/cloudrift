@@ -92,7 +92,7 @@ terraform plan -out=tfplan
 terraform show -json tfplan > plan.json
 
 # 3. Create a config
-cat > cloudrift.yml <<EOF
+cat > cloudrift-s3.yml <<EOF
 aws_profile: default
 region: us-east-1
 plan_path: /path/to/plan.json

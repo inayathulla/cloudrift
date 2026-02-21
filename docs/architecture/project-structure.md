@@ -58,7 +58,7 @@ cloudrift/
 │       ├── parser/               # Plan parser tests
 │       └── policy/               # Policy engine + registry tests
 ├── config/                         # Example configurations
-│   ├── cloudrift.yml              # S3 scanning config
+│   ├── cloudrift-s3.yml            # S3 scanning config
 │   ├── cloudrift-ec2.yml          # EC2 scanning config
 │   └── cloudrift-iam.yml          # IAM scanning config
 ├── docs/                           # MkDocs documentation

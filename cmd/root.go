@@ -6,7 +6,7 @@
 //
 // Usage:
 //
-//	cloudrift scan --config=config/cloudrift.yml --service=s3
+//	cloudrift scan --config=config/cloudrift-s3.yml --service=s3
 package cmd
 
 import (
@@ -27,7 +27,7 @@ with live AWS resources, identifying attribute-level differences before
 you apply changes.
 
 Example:
-  cloudrift scan --config=config/cloudrift.yml --service=s3`,
+  cloudrift scan --config=config/cloudrift-s3.yml --service=s3`,
 	SilenceUsage: true,
 }
 

@@ -16,7 +16,7 @@ sequenceDiagram
     participant Output as internal/output
 
     User->>CLI: cloudrift scan --service=s3
-    CLI->>Config: Load cloudrift.yml
+    CLI->>Config: Load cloudrift-<service>.yml
     Config-->>CLI: profile, region, plan_path
     CLI->>AWS: InitAWS(profile, region)
     AWS-->>CLI: aws.Config
@@ -51,7 +51,7 @@ sequenceDiagram
 ### 1. Configuration Loading
 
 ```
-cloudrift.yml → Viper → (profile, region, plan_path)
+cloudrift-<service>.yml → Viper → (profile, region, plan_path)
 ```
 
 Viper reads the YAML config file and extracts AWS profile, region, and Terraform plan path.

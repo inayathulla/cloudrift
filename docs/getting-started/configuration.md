@@ -24,7 +24,7 @@ plan_path: ./plan.json
 
 Each AWS service needs its own Terraform plan file. Create separate configs per service:
 
-=== "S3 (cloudrift.yml)"
+=== "S3 (cloudrift-s3.yml)"
 
     ```yaml
     aws_profile: default
@@ -92,8 +92,8 @@ These are picked up by the AWS SDK automatically and override the config file va
 
 ## Config File Locations
 
-By default, Cloudrift looks for `cloudrift.yml` in the current working directory. Override with:
+By default, Cloudrift looks for `cloudrift-s3.yml` in the current working directory. Override with:
 
 ```bash
-cloudrift scan --config=/path/to/config/cloudrift.yml --service=s3
+cloudrift scan --config=/path/to/config/cloudrift-s3.yml --service=s3
 ```

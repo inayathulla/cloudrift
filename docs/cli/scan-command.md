@@ -12,7 +12,7 @@ cloudrift scan [flags]
 
 | Flag | Short | Type | Default | Description |
 |------|-------|------|---------|-------------|
-| `--config` | `-c` | string | `cloudrift.yml` | Path to configuration file |
+| `--config` | `-c` | string | `cloudrift-s3.yml` | Path to configuration file |
 | `--service` | `-s` | string | `s3` | AWS service to scan (`s3`, `ec2`, `iam`) |
 | `--format` | `-f` | string | `console` | Output format (`console`, `json`, `sarif`) |
 | `--output` | `-o` | string | stdout | Write output to file instead of stdout |
@@ -39,7 +39,7 @@ cloudrift scan --service=ec2
 cloudrift scan --service=iam
 
 # Use a custom config
-cloudrift scan --config=/path/to/cloudrift.yml --service=s3
+cloudrift scan --config=/path/to/cloudrift-s3.yml --service=s3
 ```
 
 ### Output Formats
@@ -107,7 +107,7 @@ cloudrift scan --service=s3 --skip-policies
 
 The scan command executes in 8 sequential steps:
 
-1. **Load config** — Read `cloudrift.yml` via Viper
+1. **Load config** — Read `cloudrift-<service>.yml` via Viper
 2. **Initialize AWS** — Load AWS SDK v2 config with profile and region
 3. **Validate credentials** — Verify AWS credentials are valid
 4. **Fetch identity** — Call STS `GetCallerIdentity` to display account info

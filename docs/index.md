@@ -65,7 +65,7 @@ Cloudrift compares your Terraform plan JSON against live AWS infrastructure to d
     docker run -v ~/.aws:/root/.aws:ro \
       -v $(pwd):/work \
       inayathulla/cloudrift:latest scan \
-      --config=/work/cloudrift.yml --service=s3
+      --config=/work/cloudrift-s3.yml --service=s3
     ```
 
 === "Build from Source"
@@ -84,7 +84,7 @@ terraform plan -out=tfplan
 terraform show -json tfplan > plan.json
 
 # 2. Create a config file
-cat > cloudrift.yml <<EOF
+cat > cloudrift-s3.yml <<EOF
 aws_profile: default
 region: us-east-1
 plan_path: ./plan.json

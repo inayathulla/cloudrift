@@ -23,7 +23,7 @@ import (
 //   - plan_path: path to the Terraform plan JSON file
 //
 // Parameters:
-//   - configPath: filesystem path to the cloudrift.yml configuration file
+//   - configPath: filesystem path to the cloudrift config file (e.g., cloudrift-s3.yml)
 //
 // Returns:
 //   - profile: AWS profile name (may be empty for default)

@@ -46,7 +46,7 @@ docker run --rm \
   -v ~/.aws:/root/.aws:ro \
   -v $(pwd):/work \
   cloudrift scan \
-  --config=/work/cloudrift.yml \
+  --config=/work/cloudrift-s3.yml \
   --service=s3
 ```
 
@@ -117,7 +117,7 @@ docker run --rm \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   -v $(pwd):/work \
   inayathulla/cloudrift:latest scan \
-  --config=/work/cloudrift.yml \
+  --config=/work/cloudrift-s3.yml \
   --service=s3 \
   --fail-on-violation \
   --no-emoji
