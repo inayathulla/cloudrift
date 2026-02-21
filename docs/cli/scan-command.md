@@ -13,7 +13,7 @@ cloudrift scan [flags]
 | Flag | Short | Type | Default | Description |
 |------|-------|------|---------|-------------|
 | `--config` | `-c` | string | `cloudrift.yml` | Path to configuration file |
-| `--service` | `-s` | string | `s3` | AWS service to scan (`s3`, `ec2`) |
+| `--service` | `-s` | string | `s3` | AWS service to scan (`s3`, `ec2`, `iam`) |
 | `--format` | `-f` | string | `console` | Output format (`console`, `json`, `sarif`) |
 | `--output` | `-o` | string | stdout | Write output to file instead of stdout |
 | `--policy-dir` | `-p` | string | — | Directory containing custom OPA policies |
@@ -34,6 +34,9 @@ cloudrift scan --service=s3
 
 # Scan EC2 instances
 cloudrift scan --service=ec2
+
+# Scan IAM resources (roles, users, policies, groups)
+cloudrift scan --service=iam
 
 # Use a custom config
 cloudrift scan --config=/path/to/cloudrift.yml --service=s3

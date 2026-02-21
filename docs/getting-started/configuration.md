@@ -40,6 +40,14 @@ Each AWS service needs its own Terraform plan file. Create separate configs per 
     plan_path: ./ec2-plan.json
     ```
 
+=== "IAM (cloudrift-iam.yml)"
+
+    ```yaml
+    aws_profile: default
+    region: us-east-1
+    plan_path: ./iam-plan.json
+    ```
+
 Use the `--config` flag to select the config:
 
 ```bash
@@ -61,7 +69,7 @@ terraform show -json tfplan > plan.json
 ```
 
 !!! tip "Plan file scope"
-    The plan file should contain all the resources you want to scan. Cloudrift extracts resources matching the selected `--service` type (e.g., `aws_s3_bucket` for S3, `aws_instance` for EC2).
+    The plan file should contain all the resources you want to scan. Cloudrift extracts resources matching the selected `--service` type (e.g., `aws_s3_bucket` for S3, `aws_instance` for EC2, `aws_iam_role`/`aws_iam_user`/`aws_iam_policy`/`aws_iam_group` for IAM).
 
 ### Plan File Structure
 

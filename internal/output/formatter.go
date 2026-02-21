@@ -32,13 +32,13 @@ type PolicyOutput struct {
 
 // ComplianceOutput contains compliance scoring results.
 type ComplianceOutput struct {
-	OverallPercentage float64                    `json:"overall_percentage"`
-	TotalPolicies     int                        `json:"total_policies"`
-	PassingPolicies   int                        `json:"passing_policies"`
-	FailingPolicies   int                        `json:"failing_policies"`
-	Categories        map[string]CategoryScore   `json:"categories"`
-	Frameworks        map[string]FrameworkScore   `json:"frameworks"`
-	ActiveFrameworks  []string                   `json:"active_frameworks,omitempty"`
+	OverallPercentage float64                   `json:"overall_percentage"`
+	TotalPolicies     int                       `json:"total_policies"`
+	PassingPolicies   int                       `json:"passing_policies"`
+	FailingPolicies   int                       `json:"failing_policies"`
+	Categories        map[string]CategoryScore  `json:"categories"`
+	Frameworks        map[string]FrameworkScore `json:"frameworks"`
+	ActiveFrameworks  []string                  `json:"active_frameworks,omitempty"`
 }
 
 // CategoryScore holds pass/fail counts for a single policy category.
@@ -59,11 +59,11 @@ type FrameworkScore struct {
 
 // PolicyViolationOutput represents a single policy violation in JSON output.
 type PolicyViolationOutput struct {
-	PolicyID        string `json:"policy_id"`
-	PolicyName      string `json:"policy_name"`
-	Message         string `json:"message"`
-	Severity        string `json:"severity"`
-	ResourceType    string `json:"resource_type"`
+	PolicyID        string   `json:"policy_id"`
+	PolicyName      string   `json:"policy_name"`
+	Message         string   `json:"message"`
+	Severity        string   `json:"severity"`
+	ResourceType    string   `json:"resource_type"`
 	ResourceAddress string   `json:"resource_address"`
 	Remediation     string   `json:"remediation,omitempty"`
 	Category        string   `json:"category,omitempty"`

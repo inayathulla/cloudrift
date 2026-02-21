@@ -14,7 +14,7 @@ Cloudrift compares your Terraform plan JSON against live AWS infrastructure to d
 
     ---
 
-    Compare live AWS resources (S3, EC2) against Terraform plan files. See attribute-level diffs with colorized console output.
+    Compare live AWS resources (S3, EC2, IAM) against Terraform plan files. See attribute-level diffs with colorized console output.
 
 -   :material-shield-check:{ .lg .middle } **49 Security Policies**
 

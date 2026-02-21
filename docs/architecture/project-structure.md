@@ -11,6 +11,7 @@ cloudrift/
 │   │   ├── config.go               # AWS SDK v2 configuration
 │   │   ├── s3.go                   # S3 API client (parallel attribute fetching)
 │   │   ├── ec2.go                  # EC2 API client (pagination support)
+│   │   ├── iam.go                  # IAM API client (roles, users, policies, groups)
 │   │   └── identity.go            # STS identity operations
 │   ├── common/                     # Shared utilities
 │   │   └── bootstrap.go           # Config loading, AWS init, credential validation
@@ -19,12 +20,15 @@ cloudrift/
 │   │   ├── registry.go            # Service detector registry
 │   │   ├── s3.go                  # S3 drift detector
 │   │   ├── ec2.go                 # EC2 drift detector
+│   │   ├── iam.go                 # IAM drift detector
 │   │   ├── s3_printer.go          # S3 console output
 │   │   ├── ec2_printer.go         # EC2 console output
+│   │   ├── iam_printer.go         # IAM console output
 │   │   └── printer.go            # Common printer utilities
 │   ├── models/                     # Data structures
 │   │   ├── s3.go                  # S3Bucket, PublicAccessBlockConfig, LifecycleRuleSummary
 │   │   ├── ec2.go                 # EC2Instance, BlockDevice
+│   │   ├── iam.go                 # IAMRole, IAMUser, IAMPolicy, IAMGroup
 │   │   └── analytics.go          # Analytics models
 │   ├── output/                     # Output formatters
 │   │   ├── formatter.go          # Format registry, interfaces, data types
@@ -34,7 +38,8 @@ cloudrift/
 │   ├── parser/                     # Terraform plan JSON parsers
 │   │   ├── plan.go               # Core parsing logic
 │   │   ├── s3.go                 # S3 resource parser
-│   │   └── ec2.go                # EC2 resource parser
+│   │   ├── ec2.go                # EC2 resource parser
+│   │   └── iam.go                # IAM resource parser
 │   └── policy/                     # OPA policy engine
 │       ├── engine.go             # Policy evaluation (compile, query, parse)
 │       ├── loader.go             # Embedded policy loading (//go:embed)
@@ -54,7 +59,8 @@ cloudrift/
 │       └── policy/               # Policy engine + registry tests
 ├── config/                         # Example configurations
 │   ├── cloudrift.yml              # S3 scanning config
-│   └── cloudrift-ec2.yml          # EC2 scanning config
+│   ├── cloudrift-ec2.yml          # EC2 scanning config
+│   └── cloudrift-iam.yml          # IAM scanning config
 ├── docs/                           # MkDocs documentation
 ├── .github/workflows/             # CI/CD workflows
 ├── Dockerfile                      # Multi-stage Docker build
@@ -72,7 +78,7 @@ cloudrift/
 | `internal/aws` | AWS SDK v2 API calls for each service |
 | `internal/common` | Shared utilities: config loading, AWS initialization, credential validation |
 | `internal/detector` | Drift detection logic: compare planned vs live, build DriftResult structs |
-| `internal/models` | Data structures for AWS resources (S3Bucket, EC2Instance) |
+| `internal/models` | Data structures for AWS resources (S3Bucket, EC2Instance, IAMRole, etc.) |
 | `internal/output` | Output formatters (Console, JSON, SARIF) and format registry |
 | `internal/parser` | Terraform plan JSON parsing, resource extraction |
 | `internal/policy` | OPA policy engine: loading, compilation, evaluation, result types |
@@ -91,7 +97,7 @@ type DriftDetector interface {
 }
 ```
 
-Implemented by `S3DriftDetector` and `EC2DriftDetector`.
+Implemented by `S3DriftDetector`, `EC2DriftDetector`, and `IAMDriftDetector`.
 
 ### DriftResultPrinter
 
@@ -101,7 +107,7 @@ type DriftResultPrinter interface {
 }
 ```
 
-Implemented by `S3DriftResultPrinter` and `EC2DriftResultPrinter`.
+Implemented by `S3DriftResultPrinter`, `EC2DriftResultPrinter`, and `IAMDriftResultPrinter`.
 
 ### Formatter
 

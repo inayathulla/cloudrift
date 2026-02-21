@@ -2,6 +2,9 @@
 
 This guide walks through adding support for a new AWS service to Cloudrift. Each service requires 5 new files.
 
+!!! info "Currently supported services"
+    Cloudrift ships with drift detection for **S3**, **EC2**, and **IAM**. Use this guide to add additional services.
+
 ## Checklist
 
 - [ ] Create the data model (`internal/models/`)

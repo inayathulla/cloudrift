@@ -200,7 +200,9 @@ func (e *Engine) queryRule(ctx context.Context, input map[string]interface{}, ru
 					// Skip boolean results (e.g., when deny is empty set evaluating to false)
 				default:
 					// For sets and other types, try to iterate
-					if set, ok := v.(interface{ Iter(func(interface{}) error) error }); ok {
+					if set, ok := v.(interface {
+						Iter(func(interface{}) error) error
+					}); ok {
 						set.Iter(func(item interface{}) error {
 							violation := e.parseViolation(item, pkg, defaultSeverity, input)
 							if violation != nil {

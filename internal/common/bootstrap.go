@@ -69,3 +69,9 @@ func LoadPlan(planPath string) ([]models.S3Bucket, error) {
 func LoadEC2Plan(planPath string) ([]models.EC2Instance, error) {
 	return parser.LoadEC2Plan(planPath)
 }
+
+// LoadIAMPlan reads and parses a Terraform plan JSON file for IAM resources.
+// Returns all IAM resource types: roles, users, policies, and groups.
+func LoadIAMPlan(planPath string) (*models.IAMPlanResources, error) {
+	return parser.LoadIAMPlan(planPath)
+}

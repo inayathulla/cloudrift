@@ -106,3 +106,29 @@ func LoadEC2Plan(path string) ([]models.EC2Instance, error) {
 
 	return ParseEC2Instances(&plan), nil
 }
+
+// LoadIAMPlan reads a Terraform JSON plan file and extracts IAM resource configurations.
+//
+// The function opens the specified file, decodes it as a Terraform plan,
+// and extracts all IAM resources (roles, users, policies, groups) using ParseAllIAMResources.
+//
+// Parameters:
+//   - path: filesystem path to the Terraform plan JSON file
+//
+// Returns:
+//   - *models.IAMPlanResources: IAM resources found in the plan
+//   - error: if the file cannot be read or parsed
+func LoadIAMPlan(path string) (*models.IAMPlanResources, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open plan file: %w", err)
+	}
+	defer file.Close()
+
+	var plan TerraformPlan
+	if err := json.NewDecoder(file).Decode(&plan); err != nil {
+		return nil, fmt.Errorf("failed to decode JSON: %w", err)
+	}
+
+	return ParseAllIAMResources(&plan), nil
+}

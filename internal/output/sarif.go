@@ -63,17 +63,17 @@ type sarifMessage struct {
 }
 
 type sarifResult struct {
-	RuleID    string               `json:"ruleId"`
-	RuleIndex int                  `json:"ruleIndex"`
-	Level     string               `json:"level"`
-	Message   sarifMessage         `json:"message"`
-	Locations []sarifLocation      `json:"locations,omitempty"`
-	Fixes     []sarifFix           `json:"fixes,omitempty"`
+	RuleID     string                 `json:"ruleId"`
+	RuleIndex  int                    `json:"ruleIndex"`
+	Level      string                 `json:"level"`
+	Message    sarifMessage           `json:"message"`
+	Locations  []sarifLocation        `json:"locations,omitempty"`
+	Fixes      []sarifFix             `json:"fixes,omitempty"`
 	Properties map[string]interface{} `json:"properties,omitempty"`
 }
 
 type sarifLocation struct {
-	PhysicalLocation sarifPhysicalLocation `json:"physicalLocation"`
+	PhysicalLocation sarifPhysicalLocation  `json:"physicalLocation"`
 	LogicalLocations []sarifLogicalLocation `json:"logicalLocations,omitempty"`
 }
 

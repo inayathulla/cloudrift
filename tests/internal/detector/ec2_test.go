@@ -289,7 +289,7 @@ func TestDetectAllEC2Drift_MultipleInstances(t *testing.T) {
 		{InstanceID: "i-333", InstanceType: "t3.medium", Tags: map[string]string{"Name": "inst-3"}},
 	}
 	lives := []models.EC2Instance{
-		{InstanceID: "i-111", InstanceType: "t3.micro", Tags: map[string]string{"Name": "inst-1"}},  // No drift
+		{InstanceID: "i-111", InstanceType: "t3.micro", Tags: map[string]string{"Name": "inst-1"}}, // No drift
 		{InstanceID: "i-222", InstanceType: "t3.large", Tags: map[string]string{"Name": "inst-2"}}, // Type drift
 		// i-333 missing
 	}

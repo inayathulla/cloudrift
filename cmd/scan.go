@@ -97,7 +97,7 @@ security and compliance violations.
 
 Flags:
   --config, -c         Path to cloudrift.yml configuration file
-  --service, -s        AWS service to scan (supports: s3, ec2)
+  --service, -s        AWS service to scan (supports: s3, ec2, iam)
   --format, -f         Output format: console, json, sarif (default: console)
   --output, -o         Write output to file instead of stdout
   --policy-dir, -p     Directory containing custom OPA policies (.rego files)
@@ -111,6 +111,7 @@ Example:
   cloudrift scan --service=ec2 --format=json
   cloudrift scan --service=s3 --format=sarif --output=drift-report.sarif
   cloudrift scan --service=s3 --policy-dir=./my-policies --fail-on-violation
+  cloudrift scan --service=iam --format=json
   cloudrift scan --service=s3 --frameworks=hipaa,soc2`,
 	Run: func(cmd *cobra.Command, args []string) {
 		initIcons()
@@ -234,9 +235,22 @@ Example:
 			planResources = pr
 			planCount = len(pr)
 
+		case "iam":
+			det = detector.NewIAMDriftDetector(cfg)
+			printer = detector.IAMDriftResultPrinter{}
+			serviceName = "IAM"
+			pr, err := common.LoadIAMPlan(planPath)
+			if err != nil {
+				s.Stop()
+				color.Red("%s Failed to load plan: %v", icons.Cross, err)
+				os.Exit(1)
+			}
+			planResources = pr
+			planCount = pr.TotalCount()
+
 		default:
 			s.Stop()
-			color.Red("%s Unsupported service: %s (supported: s3, ec2)", icons.Cross, service)
+			color.Red("%s Unsupported service: %s (supported: s3, ec2, iam)", icons.Cross, service)
 			os.Exit(1)
 		}
 
@@ -637,10 +651,21 @@ func printPolicyResults(result *policy.EvaluationResult, reg *policy.PolicyRegis
 func convertToScanResult(results []detector.DriftResult, service, accountID, region string, totalResources int, duration time.Duration) output.ScanResult {
 	drifts := make([]detector.DriftInfo, 0, len(results))
 
+	// Determine the default resource type based on service
+	defaultResourceType := "aws_s3_bucket"
+	switch service {
+	case "EC2":
+		defaultResourceType = "aws_instance"
+	case "IAM":
+		defaultResourceType = "aws_iam_role" // default, will be refined per-resource
+	}
+
 	for _, r := range results {
+		resourceType := defaultResourceType
+
 		info := detector.DriftInfo{
 			ResourceID:      r.BucketName,
-			ResourceType:    "aws_s3_bucket",
+			ResourceType:    resourceType,
 			ResourceName:    r.BucketName,
 			Missing:         r.Missing,
 			Diffs:           make(map[string][2]interface{}),
@@ -649,7 +674,7 @@ func convertToScanResult(results []detector.DriftResult, service, accountID, reg
 		}
 
 		if r.AclDiff {
-			info.Diffs["acl"] = [2]interface{}{"<planned>", "<actual>"}
+			info.Diffs["attributes"] = [2]interface{}{"<planned>", "<actual>"}
 		}
 		if r.VersioningDiff {
 			info.Diffs["versioning_enabled"] = [2]interface{}{"<planned>", "<actual>"}
@@ -769,6 +794,81 @@ func buildPolicyInputs(service string, planResources, liveResources interface{},
 					}
 				}
 
+				inputs = append(inputs, input)
+			}
+		}
+
+	case "iam":
+		if iamPlan, ok := planResources.(*models.IAMPlanResources); ok {
+			// IAM Roles
+			for _, role := range iamPlan.Roles {
+				input := policy.NewPolicyInput("aws_iam_role", role.TerraformAddress)
+				input.Resource.Planned = map[string]interface{}{
+					"name":                 role.RoleName,
+					"assume_role_policy":   role.AssumeRolePolicy,
+					"max_session_duration": role.MaxSessionDuration,
+					"description":          role.Description,
+					"path":                 role.Path,
+					"tags":                 role.Tags,
+				}
+				if dr, ok := driftMap[role.RoleName]; ok {
+					input.Resource.Drift = &policy.DriftInput{
+						HasDrift: true,
+						Missing:  dr.Missing,
+					}
+				}
+				inputs = append(inputs, input)
+			}
+
+			// IAM Users
+			for _, user := range iamPlan.Users {
+				input := policy.NewPolicyInput("aws_iam_user", user.TerraformAddress)
+				input.Resource.Planned = map[string]interface{}{
+					"name": user.UserName,
+					"path": user.Path,
+					"tags": user.Tags,
+				}
+				if dr, ok := driftMap[user.UserName]; ok {
+					input.Resource.Drift = &policy.DriftInput{
+						HasDrift: true,
+						Missing:  dr.Missing,
+					}
+				}
+				inputs = append(inputs, input)
+			}
+
+			// IAM Policies
+			for _, pol := range iamPlan.Policies {
+				input := policy.NewPolicyInput("aws_iam_policy", pol.TerraformAddress)
+				input.Resource.Planned = map[string]interface{}{
+					"name":        pol.PolicyName,
+					"policy":      pol.PolicyDocument,
+					"description": pol.Description,
+					"path":        pol.Path,
+					"tags":        pol.Tags,
+				}
+				if dr, ok := driftMap[pol.PolicyName]; ok {
+					input.Resource.Drift = &policy.DriftInput{
+						HasDrift: true,
+						Missing:  dr.Missing,
+					}
+				}
+				inputs = append(inputs, input)
+			}
+
+			// IAM Groups
+			for _, group := range iamPlan.Groups {
+				input := policy.NewPolicyInput("aws_iam_group", group.TerraformAddress)
+				input.Resource.Planned = map[string]interface{}{
+					"name": group.GroupName,
+					"path": group.Path,
+				}
+				if dr, ok := driftMap[group.GroupName]; ok {
+					input.Resource.Drift = &policy.DriftInput{
+						HasDrift: true,
+						Missing:  dr.Missing,
+					}
+				}
 				inputs = append(inputs, input)
 			}
 		}

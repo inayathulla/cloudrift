@@ -24,7 +24,7 @@ graph LR
 | **Language** | Go | 1.24 | Core language |
 | **CLI Framework** | Cobra | 1.10 | Command-line interface |
 | **Config** | Viper | 1.21 | YAML configuration loading |
-| **AWS SDK** | AWS SDK for Go v2 | 1.41 | S3, EC2, STS API calls |
+| **AWS SDK** | AWS SDK for Go v2 | 1.41 | S3, EC2, IAM, STS API calls |
 | **Policy Engine** | Open Policy Agent | 1.13 | OPA/Rego policy evaluation |
 | **Testing** | Testify | 1.11 | Assertion library |
 | **Console** | fatih/color | 1.16 | Colorized terminal output |
@@ -74,13 +74,13 @@ Policy metadata (IDs, categories, frameworks) is extracted from `.rego` files at
 
 Each AWS service follows the same pattern with dedicated files:
 
-| Component | S3 File | EC2 File |
-|-----------|---------|----------|
-| Parser | `internal/parser/s3.go` | `internal/parser/ec2.go` |
-| AWS Client | `internal/aws/s3.go` | `internal/aws/ec2.go` |
-| Detector | `internal/detector/s3.go` | `internal/detector/ec2.go` |
-| Printer | `internal/detector/s3_printer.go` | `internal/detector/ec2_printer.go` |
-| Model | `internal/models/s3.go` | `internal/models/ec2.go` |
+| Component | S3 File | EC2 File | IAM File |
+|-----------|---------|----------|----------|
+| Parser | `internal/parser/s3.go` | `internal/parser/ec2.go` | `internal/parser/iam.go` |
+| AWS Client | `internal/aws/s3.go` | `internal/aws/ec2.go` | `internal/aws/iam.go` |
+| Detector | `internal/detector/s3.go` | `internal/detector/ec2.go` | `internal/detector/iam.go` |
+| Printer | `internal/detector/s3_printer.go` | `internal/detector/ec2_printer.go` | `internal/detector/iam_printer.go` |
+| Model | `internal/models/s3.go` | `internal/models/ec2.go` | `internal/models/iam.go` |
 
 Adding a new service means creating one file per component and registering it in `cmd/scan.go`.
 

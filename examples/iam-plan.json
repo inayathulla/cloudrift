@@ -1,0 +1,129 @@
+{
+  "resource_changes": [
+    {
+      "address": "aws_iam_role.lambda_exec",
+      "type": "aws_iam_role",
+      "name": "lambda_exec",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "name": "lambda-exec-role",
+          "path": "/",
+          "description": "IAM role for Lambda execution",
+          "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+          "max_session_duration": 3600,
+          "tags": {
+            "Environment": "production",
+            "Team": "platform"
+          }
+        }
+      }
+    },
+    {
+      "address": "aws_iam_role.ecs_task",
+      "type": "aws_iam_role",
+      "name": "ecs_task",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "name": "ecs-task-role",
+          "path": "/",
+          "description": "IAM role for ECS task execution",
+          "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ecs-tasks.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+          "max_session_duration": 3600,
+          "tags": {
+            "Environment": "production",
+            "Team": "backend"
+          }
+        }
+      }
+    },
+    {
+      "address": "aws_iam_user.deploy",
+      "type": "aws_iam_user",
+      "name": "deploy",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "name": "deploy-user",
+          "path": "/ci/",
+          "tags": {
+            "Environment": "production",
+            "ManagedBy": "terraform"
+          }
+        }
+      }
+    },
+    {
+      "address": "aws_iam_user.readonly",
+      "type": "aws_iam_user",
+      "name": "readonly",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "name": "readonly-user",
+          "path": "/",
+          "tags": {
+            "Environment": "production"
+          }
+        }
+      }
+    },
+    {
+      "address": "aws_iam_policy.deploy_policy",
+      "type": "aws_iam_policy",
+      "name": "deploy_policy",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "name": "deploy-policy",
+          "path": "/",
+          "description": "Policy for CI/CD deployments",
+          "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:GetObject\",\"s3:PutObject\"],\"Resource\":\"arn:aws:s3:::my-deploy-bucket/*\"}]}",
+          "tags": {
+            "Environment": "production"
+          }
+        }
+      }
+    },
+    {
+      "address": "aws_iam_policy.admin_policy",
+      "type": "aws_iam_policy",
+      "name": "admin_policy",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "name": "admin-policy",
+          "path": "/",
+          "description": "Admin policy with broad permissions",
+          "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"*\",\"Resource\":\"*\"}]}",
+          "tags": {}
+        }
+      }
+    },
+    {
+      "address": "aws_iam_group.developers",
+      "type": "aws_iam_group",
+      "name": "developers",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "name": "developers",
+          "path": "/"
+        }
+      }
+    },
+    {
+      "address": "aws_iam_group.admins",
+      "type": "aws_iam_group",
+      "name": "admins",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "name": "admins",
+          "path": "/"
+        }
+      }
+    }
+  ]
+}

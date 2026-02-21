@@ -48,6 +48,27 @@ S3 attributes are fetched in parallel using Go's `errgroup` — all 7 API calls 
 
 EC2 instances are fetched with pagination to support large fleets.
 
+### IAM Resources
+
+| Attribute | Description |
+|-----------|-------------|
+| Roles — Trust Policy | AssumeRolePolicyDocument (JSON-normalized comparison) |
+| Roles — Max Session | Maximum session duration in seconds |
+| Roles — Description | Role description text |
+| Roles — Path | IAM path for the role |
+| Roles — Attached Policies | Managed policy ARNs attached to the role |
+| Users — Path | IAM path for the user |
+| Users — Attached Policies | Managed policy ARNs attached to the user |
+| Policies — Document | Policy document JSON (JSON-normalized comparison) |
+| Policies — Description | Policy description text |
+| Policies — Path | IAM path for the policy |
+| Groups — Path | IAM path for the group |
+| Groups — Attached Policies | Managed policy ARNs attached to the group |
+| Groups — Members | Group membership (user names) |
+| All — Tags | Resource tags (key-value pairs) |
+
+IAM resources (roles, users, policies, groups) are fetched in parallel using `errgroup`. AWS service-linked roles and AWS-managed policies are excluded to focus on customer-managed resources. Policy documents and trust policies are compared using JSON normalization to avoid false positives from formatting differences.
+
 ---
 
 ## Drift Types

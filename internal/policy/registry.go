@@ -17,10 +17,10 @@ type PolicyInfo struct {
 // PolicyRegistry provides aggregated metadata about all built-in policies.
 // Totals are computed dynamically from embedded .rego files — never hardcoded.
 type PolicyRegistry struct {
-	Policies       map[string]PolicyInfo `json:"policies"`
-	TotalPolicies  int                   `json:"total_policies"`
-	CategoryTotals map[string]int        `json:"category_totals"`
-	FrameworkTotals map[string]int       `json:"framework_totals"`
+	Policies        map[string]PolicyInfo `json:"policies"`
+	TotalPolicies   int                   `json:"total_policies"`
+	CategoryTotals  map[string]int        `json:"category_totals"`
+	FrameworkTotals map[string]int        `json:"framework_totals"`
 }
 
 // Regex patterns for extracting policy metadata from .rego files.
@@ -100,8 +100,8 @@ func (r *PolicyRegistry) FilterByFrameworks(frameworks []string) *PolicyRegistry
 	}
 
 	filtered := &PolicyRegistry{
-		Policies:       make(map[string]PolicyInfo),
-		CategoryTotals: make(map[string]int),
+		Policies:        make(map[string]PolicyInfo),
+		CategoryTotals:  make(map[string]int),
 		FrameworkTotals: make(map[string]int),
 	}
 
@@ -141,9 +141,9 @@ func policyMatchesFrameworks(p PolicyInfo, fwSet map[string]bool) bool {
 // clone returns a deep copy of the registry.
 func (r *PolicyRegistry) clone() *PolicyRegistry {
 	c := &PolicyRegistry{
-		Policies:       make(map[string]PolicyInfo, len(r.Policies)),
-		TotalPolicies:  r.TotalPolicies,
-		CategoryTotals: make(map[string]int, len(r.CategoryTotals)),
+		Policies:        make(map[string]PolicyInfo, len(r.Policies)),
+		TotalPolicies:   r.TotalPolicies,
+		CategoryTotals:  make(map[string]int, len(r.CategoryTotals)),
 		FrameworkTotals: make(map[string]int, len(r.FrameworkTotals)),
 	}
 	for k, v := range r.Policies {
