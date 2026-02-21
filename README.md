@@ -79,7 +79,7 @@
 - **5 Compliance Frameworks** — SOC 2 Type II, ISO 27001, PCI DSS, HIPAA, GDPR
 - **Compliance Scoring** — Per-category and per-framework pass/fail percentages
 - **Multiple Output Formats** — Console, JSON, SARIF for CI/CD integration
-- **Multi-Service Support** — S3 buckets and EC2 instances (drift), 13 resource types (policies)
+- **Multi-Service Support** — S3 buckets, EC2 instances, and IAM resources (drift), 13 resource types (policies)
 - **Custom Policies** — Extend with your own OPA `.rego` policies
 - **CI/CD Ready** — GitHub Actions, GitLab CI, Jenkins with `--fail-on-violation`
 - **GitHub Security Integration** — SARIF output for Security tab
@@ -181,6 +181,9 @@ cloudrift scan --service=s3
 # Scan EC2 instances
 cloudrift scan --service=ec2
 
+# Scan IAM resources (roles, users, policies, groups)
+cloudrift scan --service=iam
+
 # Output as JSON with compliance scoring
 cloudrift scan --service=s3 --format=json
 
@@ -202,7 +205,7 @@ cloudrift scan [flags]
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
 | `--config` | `-c` | `cloudrift.yml` | Path to configuration file |
-| `--service` | `-s` | `s3` | AWS service to scan (s3, ec2) |
+| `--service` | `-s` | `s3` | AWS service to scan (s3, ec2, iam) |
 | `--format` | `-f` | `console` | Output format (console, json, sarif) |
 | `--output` | `-o` | stdout | Write output to file |
 | `--policy-dir` | `-p` | - | Directory with custom OPA policies |
@@ -219,6 +222,7 @@ cloudrift scan [flags]
 |----------|-------------|-------------------|
 | S3 Buckets | `--service=s3` | ACL, tags, versioning, encryption, logging, public access block, lifecycle rules |
 | EC2 Instances | `--service=ec2` | Instance type, AMI, subnet, security groups, tags, EBS optimization, monitoring |
+| IAM Resources | `--service=iam` | Roles (trust policy, max session, attached policies), users (path, policies), policies (document, description), groups (members, policies), tags |
 
 **Policy evaluation** covers 13 AWS resource types (automatically applied during drift scans):
 
@@ -573,6 +577,14 @@ region: us-east-1
 plan_path: ./examples/ec2-plan.json
 ```
 
+**IAM Scanning:**
+```yaml
+# config/cloudrift-iam.yml
+aws_profile: default
+region: us-east-1
+plan_path: ./examples/iam-plan.json
+```
+
 ## Project Structure
 
 ```
@@ -584,13 +596,16 @@ cloudrift/
 │   ├── aws/                      # AWS API integrations
 │   │   ├── config.go             # AWS SDK configuration
 │   │   ├── s3.go                 # S3 API client
-│   │   └── ec2.go                # EC2 API client
+│   │   ├── ec2.go                # EC2 API client
+│   │   └── iam.go                # IAM API client
 │   ├── detector/                 # Drift detection logic
 │   │   ├── interface.go          # Detector interface
 │   │   ├── s3.go                 # S3 drift detector
 │   │   ├── ec2.go                # EC2 drift detector
+│   │   ├── iam.go                # IAM drift detector
 │   │   ├── s3_printer.go         # S3 console output
-│   │   └── ec2_printer.go        # EC2 console output
+│   │   ├── ec2_printer.go        # EC2 console output
+│   │   └── iam_printer.go        # IAM console output
 │   ├── output/                   # Output formatters
 │   │   ├── formatter.go          # Format types, compliance structs
 │   │   ├── json.go               # JSON formatter
@@ -606,7 +621,7 @@ cloudrift/
 │   │       ├── security/         # 42 security policies (17 .rego files)
 │   │       ├── tagging/          # 4 tagging policies
 │   │       └── cost/             # 3 cost policies
-│   ├── models/                   # Data structures (S3Bucket, EC2Instance)
+│   ├── models/                   # Data structures (S3Bucket, EC2Instance, IAMRole, etc.)
 │   └── parser/                   # Terraform plan JSON parser
 ├── tests/                        # Unit tests
 │   └── internal/
@@ -624,6 +639,7 @@ cloudrift/
 ### Completed ✅
 - [x] S3 drift detection
 - [x] EC2 drift detection
+- [x] IAM drift detection (roles, users, policies, groups)
 - [x] JSON output format
 - [x] SARIF output format
 - [x] OPA policy engine with 49 built-in policies
@@ -635,7 +651,6 @@ cloudrift/
 - [x] Desktop dashboard ([Cloudrift UI](https://github.com/inayathulla/cloudrift-ui))
 
 ### In Progress 🚧
-- [ ] IAM drift detection
 - [ ] Security Groups drift detection
 - [ ] RDS drift detection
 

@@ -99,12 +99,10 @@ func (d *IAMDriftDetector) DetectDrift(plan, live interface{}) ([]DriftResult, e
 	for _, r := range iamResults {
 		dr := DriftResult{
 			BucketName: r.ResourceName, // Reuse BucketName field for resource name
+			Missing:    r.Missing,
+			TagDiffs:   r.TagDiffs,
+			ExtraTags:  r.ExtraTags,
 		}
-		if r.Missing {
-			dr.Missing = true
-		}
-		dr.TagDiffs = r.TagDiffs
-		dr.ExtraTags = r.ExtraTags
 
 		// Use AclDiff to indicate "other diffs exist" (same pattern as EC2)
 		if r.AssumeRolePolicyDiff || r.MaxSessionDiff || r.DescriptionDiff ||
