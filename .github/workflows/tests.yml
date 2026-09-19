@@ -23,9 +23,6 @@ jobs:
       - name: Install go-junit-report
         run: go install github.com/jstemmer/go-junit-report/v2@latest
 
-      - name: Ensure module checksums are complete
-        run: go mod download
-
       - name: Run tests and generate JUnit XML
         run: |
           mkdir -p test-results
